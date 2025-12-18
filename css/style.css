@@ -1,157 +1,244 @@
+/*
+--- ÍNDICE DE ESTILOS ---
+1. Variables Globales (:root)
+2. Estilos Generales (body, *, etc.)
+3. Contenedor
+4. Encabezado y Navegación
+5. Contenido Principal (Formulario y Listado)
+6. Sección de Información (Acerca de)
+7. Pie de Página
+8. Estilos de Elementos (Items del listado)
+*/
+
+/* 1. Variables Globales */
 :root {
-            --background: #12181F;
-            --foreground: #E2E8F0;
-            --accent: #1E293B;
-            --border: #38BDF8;
-        }
+    --background: #12181F;
+    --foreground: #E2E8F0;
+    --accent: #1E293B;
+    --border: #38BDF8;
+    --text-muted: #94a3b8;
+}
 
-        * {
-            box-sizing: border-box;
-        }
+/* 2. Estilos Generales */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-        body {
-            background-color: var(--background);
-            color: var(--foreground);
-            font-family: sans-serif;
-            margin: 0;
-            padding: 1rem;
-        }
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    line-height: 1.6;
+}
 
-        .contenedor {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
+a {
+    color: var(--border);
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
 
-        header h1 {
-            text-align: center;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 8px var(--border);
-        }
+a:hover {
+    opacity: 0.8;
+}
 
-        .formulario-contenedor {
-            background-color: var(--accent);
-            border: 1px solid var(--border);
-            padding: 1rem;
-            border-radius: 8px;
-        }
+/* 3. Contenedor */
+.contenedor {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
 
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+/* 4. Encabezado y Navegación */
+.encabezado-principal {
+    background-color: var(--accent);
+    padding: 1rem 0;
+    border-bottom: 1px solid #2c3a50;
+}
 
-        textarea {
-            background-color: var(--background);
-            color: var(--foreground);
-            border: 1px solid var(--border);
-            padding: 0.5rem;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 60px;
-            border-radius: 4px;
-        }
+.encabezado-principal .contenedor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-        .selector-archivo-contenedor {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            border: 1px solid var(--border);
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            text-align: center;
-            border-radius: 4px;
-        }
-        
-        .selector-archivo-contenedor input[type=file] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
+.encabezado-principal__titulo {
+    font-size: 1.5rem;
+    text-shadow: 0 0 8px var(--border);
+}
 
-        #nombre-archivo {
-            font-style: italic;
-            opacity: 0.7;
-            margin-top: 0.5rem;
-            text-align: center;
-        }
+.navegacion-principal {
+    display: flex;
+    gap: 1.5rem;
+}
 
-        button {
-            background-color: var(--border);
-            color: var(--background);
-            border: none;
-            padding: 0.75rem;
-            font-family: inherit;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            border-radius: 4px;
-            transition: opacity 0.2s ease;
-        }
-        
-        button:hover {
-            opacity: 0.85;
-        }
+/* 5. Contenido Principal (Formulario y Listado) */
+.contenido-principal {
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
 
-        #listado {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+.formulario-contenedor {
+    background-color: var(--accent);
+    border: 1px solid #2c3a50;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
 
-        .elemento {
-            background-color: var(--accent);
-            border: 1px solid #2c3a50;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            border-radius: 8px;
-        }
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
 
-        .elemento-cabecera {
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
+textarea {
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.75rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    border-radius: 4px;
+}
 
-        .elemento-contenido pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            margin: 0;
-            font-family: inherit;
-            color: var(--foreground);
-        }
-        
-        .elemento-contenido img {
-            max-width: 100%;
-            height: auto;
-            max-height: 200px;
-            object-fit: contain;
-            border: 1px solid #2c3a50;
-            border-radius: 4px;
-        }
+.selector-archivo-contenedor {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
 
-        .elemento-acciones button, .elemento-acciones a {
-            background-color: var(--background);
-            color: var(--foreground);
-            border: 1px solid var(--border);
-            padding: 0.5rem 1rem;
-            font-family: inherit;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 4px;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
+.selector-archivo-contenedor:hover {
+    background-color: rgba(56, 189, 248, 0.1);
+}
 
-        .elemento-acciones button:hover, .elemento-acciones a:hover {
-            background-color: var(--border);
-            color: var(--background);
-        }
+.selector-archivo-contenedor input[type=file] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+
+#nombre-archivo {
+    font-style: italic;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+button[type="submit"] {
+    background-color: var(--border);
+    color: var(--background);
+    border: none;
+    padding: 0.85rem;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    border-radius: 4px;
+    transition: opacity 0.2s ease;
+}
+
+button[type="submit"]:hover {
+    opacity: 0.85;
+}
+
+.seccion-listado {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+
+/* 6. Sección de Información (Acerca de) */
+.seccion-informacion {
+    background-color: var(--accent);
+    padding: 2rem 0;
+    border-top: 1px solid #2c3a50;
+}
+
+.seccion-informacion h2 {
+    margin-bottom: 1rem;
+    color: var(--border);
+}
+
+
+/* 7. Pie de Página */
+.pie-pagina {
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: 2rem;
+    border-top: 1px solid #2c3a50;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* 8. Estilos de Elementos (Items del listado) */
+.elemento {
+    background-color: var(--accent);
+    border: 1px solid #2c3a50;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-radius: 8px;
+}
+
+.elemento-cabecera {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.elemento-contenido pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
+    color: var(--foreground);
+    line-height: 1.5;
+}
+
+.elemento-contenido img {
+    max-width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px solid #2c3a50;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+
+.elemento-acciones {
+    margin-top: 0.5rem;
+}
+
+.elemento-acciones button, .elemento-acciones a {
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.elemento-acciones button:hover, .elemento-acciones a:hover {
+    background-color: var(--border);
+    color: var(--background);
+}
