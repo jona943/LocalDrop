@@ -1,13 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Referencias a Elementos del DOM ---
-    const form = document.getElementById('formulario-subida');
-    const textInput = document.getElementById('entrada-texto');
-    const fileInput = document.getElementById('entrada-archivo');
-    const fileNameDisplay = document.getElementById('nombre-archivo');
     const feed = document.getElementById('listado');
     const botonLimpiarTodo = document.getElementById('boton-limpiar-todo');
-
-    const POLLING_INTERVAL = 4000; // 4 segundos
+    const dispositivosLista = document.getElementById('dispositivos-lista');
 
     // --- Lógica de la Interfaz ---
 
@@ -18,33 +11,24 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Ningún archivo seleccionado';
     });
 
-    // Envío del formulario (igual que en script.js)
+    // Envío del formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = textInput.value.trim();
         const file = fileInput.files[0];
-
-        if (!text && !file) {
-            alert('Por favor, escribe un mensaje o selecciona un archivo.');
-            return;
-        }
+        if (!text && !file) return;
 
         const formData = new FormData();
         if (text) formData.append('text', text);
         if (file) formData.append('file', file);
 
         try {
-            // El servidor enviará un evento SSE que actualizará la UI
-            await fetch('/item', {
-                method: 'POST',
-                body: formData,
-            });
+            await fetch('/item', { method: 'POST', body: formData });
             textInput.value = '';
             fileInput.value = null;
             fileNameDisplay.textContent = 'Ningún archivo seleccionado';
         } catch (error) {
             console.error('Error al enviar:', error);
-            alert('Hubo un error al enviar el item.');
         }
     });
 
@@ -52,46 +36,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Limpiar todo el feed
     botonLimpiarTodo.addEventListener('click', async () => {
-        if (!confirm('¿Estás seguro de que quieres borrar todos los elementos? Esta acción no se puede deshacer.')) {
-            return;
-        }
+        if (!confirm('¿Estás seguro de que quieres borrar todos los elementos?')) return;
         try {
-            // El servidor enviará un evento SSE que actualizará la UI
-            const response = await fetch('/items', { method: 'DELETE' });
-            if (!response.ok) throw new Error('El servidor rechazó la petición.');
+            await fetch('/items', { method: 'DELETE' });
         } catch (error) {
             console.error('Error al limpiar todo:', error);
-            alert('No se pudieron borrar los elementos.');
         }
     });
 
-    // Función para borrar un item individual
+    // Borrar un item individual
     const borrarItem = async (itemId) => {
-        if (!confirm('¿Estás seguro de que quieres borrar este elemento?')) {
-            return;
-        }
+        if (!confirm('¿Estás seguro de que quieres borrar este elemento?')) return;
         try {
-            // El servidor enviará un evento SSE que actualizará la UI
-            const response = await fetch(`/item/${itemId}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('El servidor rechazó la petición.');
+            await fetch(`/item/${itemId}`, { method: 'DELETE' });
         } catch (error) {
             console.error(`Error al borrar el item ${itemId}:`, error);
-            alert('No se pudo borrar el elemento.');
+        }
+    };
+
+    // Renombrar un dispositivo
+    const renombrarDispositivo = async (userAgent, nuevoNombre) => {
+        try {
+            await fetch('/device/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAgent, newName: nuevoNombre })
+            });
+        } catch (error) {
+            console.error('Error al renombrar:', error);
         }
     };
 
 
-    // --- Renderizado de Items (Versión Admin) ---
+    // --- Renderizado ---
 
     const renderItems = (items) => {
-        feed.innerHTML = ''; // Limpiar el feed actual
-        
+        feed.innerHTML = '';
         items.forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'elemento';
             const date = new Date(item.timestamp).toLocaleString();
             
-            // Se añade el botón de borrar a las acciones del elemento y se usa el nombre y color del dispositivo
             itemDiv.innerHTML = `
                 <div class="elemento-cabecera">
                     <span class="nombre-dispositivo" style="color: ${item.color}; font-weight: bold;">${item.deviceName}</span> @ <span>${date}</span>
@@ -109,32 +94,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pre = document.createElement('pre');
                 pre.textContent = item.content;
                 contentDiv.appendChild(pre);
-                
                 const copyBtn = document.createElement('button');
                 copyBtn.textContent = 'Copiar';
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(item.content).then(() => {
-                        copyBtn.textContent = '¡Copiado!';
-                        setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 2000);
-                    });
-                };
-                // Insertar antes del botón de borrar
+                copyBtn.onclick = () => navigator.clipboard.writeText(item.content);
                 actionsDiv.insertBefore(copyBtn, actionsDiv.firstChild);
-
             } else if (item.type === 'file') {
-                const isImage = item.mimeType && item.mimeType.startsWith('image/');
-                
-                if (isImage) {
+                if (item.mimeType && item.mimeType.startsWith('image/')) {
                     const img = document.createElement('img');
                     img.src = `/uploads/${item.content}`;
-                    img.alt = item.originalName;
                     contentDiv.appendChild(img);
                 } else {
                     const p = document.createElement('p');
                     p.textContent = `Archivo: ${item.originalName}`;
                     contentDiv.appendChild(p);
                 }
-                
                 const downloadLink = document.createElement('a');
                 downloadLink.href = `/uploads/${item.content}`;
                 downloadLink.textContent = 'Descargar';
@@ -143,12 +116,44 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             feed.appendChild(itemDiv);
-
-            // Añadir el event listener para el botón de borrar de este item
-            const botonBorrar = itemDiv.querySelector(`.boton-peligro[data-id="${item.id}"]`);
-            botonBorrar.addEventListener('click', () => borrarItem(item.id));
+            itemDiv.querySelector(`.boton-peligro[data-id="${item.id}"]`).addEventListener('click', () => borrarItem(item.id));
         });
     };
+
+    const fetchAndRenderDevices = async () => {
+        try {
+            const response = await fetch('/devices');
+            const devices = await response.json();
+            dispositivosLista.innerHTML = '';
+
+            for (const userAgent in devices) {
+                const device = devices[userAgent];
+                const deviceDiv = document.createElement('div');
+                deviceDiv.className = 'dispositivo-item';
+                deviceDiv.style.borderColor = device.color;
+                
+                deviceDiv.innerHTML = `
+                    <input type="text" value="${device.name}" placeholder="Nombre del dispositivo">
+                    <button data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
+                `;
+                
+                dispositivosLista.appendChild(deviceDiv);
+            }
+
+            // Añadir event listeners a los botones de guardar
+            dispositivosLista.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const ua = decodeURIComponent(button.dataset.userAgent);
+                    const newName = button.previousElementSibling.value;
+                    renombrarDispositivo(ua, newName);
+                });
+            });
+
+        } catch (error) {
+            console.error('Error al obtener dispositivos:', error);
+        }
+    };
+
 
     // --- Sincronización en Tiempo Real (SSE) ---
     
@@ -164,8 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Carga inicial
+    // Cargas iniciales
     fetchItems();
+    fetchAndRenderDevices();
     
     // Conexión al stream de eventos del servidor
     const eventSource = new EventSource('/events');
@@ -175,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.event === 'update') {
             console.log('Recibida actualización del servidor, refrescando...');
             fetchItems();
+            fetchAndRenderDevices(); // También refrescar la lista de dispositivos
         }
     };
 

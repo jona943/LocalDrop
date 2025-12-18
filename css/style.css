@@ -8,7 +8,8 @@
 6. Sección de Información (Acerca de)
 7. Pie de Página
 8. Estilos de Elementos (Items del listado)
-9. Media Queries (Responsividad)
+9. Gestión de Dispositivos (Admin)
+10. Media Queries (Responsividad)
 */
 
 /* 1. Variables Globales */
@@ -274,7 +275,59 @@ button[type="submit"]:hover {
     color: var(--foreground);
 }
 
-/* 9. Media Queries (Responsividad) */
+/* 9. Gestión de Dispositivos (Admin) */
+.seccion-gestion-dispositivos {
+    padding: 2rem 0;
+    border-top: 1px solid #2c3a50;
+}
+
+.seccion-gestion-dispositivos h2 {
+    margin-bottom: 1.5rem;
+    color: var(--border);
+}
+
+#dispositivos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dispositivo-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: var(--accent);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 5px solid; /* El color se pondrá con JS */
+}
+
+.dispositivo-item input {
+    flex-grow: 1;
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid #2c3a50;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.dispositivo-item button {
+    background-color: var(--border);
+    color: var(--background);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.2s ease;
+}
+
+.dispositivo-item button:hover {
+    opacity: 0.85;
+}
+
+
+/* 10. Media Queries (Responsividad) */
 @media (max-width: 600px) {
     body {
         font-size: 0.95rem;
@@ -295,6 +348,11 @@ button[type="submit"]:hover {
 
     .formulario-contenedor {
         padding: 1rem;
+    }
+
+    .dispositivo-item {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 

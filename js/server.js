@@ -130,6 +130,30 @@ app.get('/', (req, res) => {
 
 app.get('/items', (req, res) => res.json(items.sort((a, b) => b.timestamp - a.timestamp)));
 
+app.get('/devices', (req, res) => res.json(devices));
+
+app.post('/device/rename', (req, res) => {
+    const { userAgent, newName } = req.body;
+    if (devices[userAgent] && newName) {
+        const oldName = devices[userAgent].name;
+        devices[userAgent].name = newName;
+        saveDevices();
+
+        // Actualizar el nombre en los items de la sesión actual
+        items.forEach(item => {
+            if (item.userAgent === userAgent) {
+                item.deviceName = newName;
+            }
+        });
+
+        logInteraction(`Dispositivo renombrado: de "${oldName}" a "${newName}" (${userAgent})`);
+        res.status(200).send({ message: 'Dispositivo renombrado' });
+        broadcastUpdate(); // Notificar a todos para que refresquen y vean el nuevo nombre
+    } else {
+        res.status(400).send({ message: 'Faltan datos para renombrar' });
+    }
+});
+
 app.post('/item', upload.single('file'), (req, res) => {
     const userAgent = req.headers['user-agent'];
     const deviceData = getDeviceData(userAgent);
@@ -138,7 +162,7 @@ app.post('/item', upload.single('file'), (req, res) => {
 
     if (req.file) {
         newItem = {
-            id: timestamp, type: 'file', deviceName: deviceData.name, color: deviceData.color, timestamp,
+            id: timestamp, type: 'file', deviceName: deviceData.name, color: deviceData.color, timestamp, userAgent,
             content: req.file.filename,
             originalName: req.file.originalname,
             mimeType: req.file.mimetype
@@ -146,7 +170,7 @@ app.post('/item', upload.single('file'), (req, res) => {
         logInteraction(`Archivo subido: "${req.file.originalname}" por ${deviceData.name}`);
     }
     if (req.body && req.body.text) {
-        newItem = { id: timestamp, type: 'text', deviceName: deviceData.name, color: deviceData.color, timestamp, content: req.body.text };
+        newItem = { id: timestamp, type: 'text', deviceName: deviceData.name, color: deviceData.color, timestamp, userAgent, content: req.body.text };
         logInteraction(`Texto subido: "${req.body.text}" por ${deviceData.name}`);
     }
 
