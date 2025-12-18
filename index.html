@@ -7,12 +7,17 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <header class="encabezado-principal">
+        <div class="contenedor">
+            <h1 class="encabezado-principal__titulo">LocalDrop</h1>
+            <nav class="navegacion-principal">
+                <a href="#">Inicio</a>
+                <a href="#acerca-de">Acerca de</a>
+            </nav>
+        </div>
+    </header>
 
-    <div class="contenedor">
-        <header>
-            <h1>LocalDrop</h1>
-        </header>
-
+    <main class="contenido-principal contenedor">
         <section class="formulario-contenedor">
             <form id="formulario-subida">
                 <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
@@ -25,8 +30,23 @@
             </form>
         </section>
 
-        <main id="listado"></main>
-    </div>
+        <section id="listado" class="seccion-listado">
+            <!-- El contenido del listado de archivos se insertará aquí dinámicamente -->
+        </section>
+    </main>
+
+    <section id="acerca-de" class="seccion-informacion">
+        <div class="contenedor">
+            <h2>Acerca de LocalDrop</h2>
+            <p>Una herramienta ligera y eficiente, construida con Vanilla JS y Node.js, para compartir archivos y texto en tu red local sin depender de servicios de terceros.</p>
+        </div>
+    </section>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <p>&copy; 2025 LocalDrop. Un proyecto en desarrollo.</p>
+        </div>
+    </footer>
 
     <script src="js/script.js"></script>
 </body>
