@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalDrop</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="contenedor">
+        <header>
+            <h1>LocalDrop</h1>
+        </header>
+
+        <section class="formulario-contenedor">
+            <form id="formulario-subida">
+                <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
+                <div class="selector-archivo-contenedor">
+                    <span>Seleccionar Archivo</span>
+                    <input type="file" id="entrada-archivo">
+                </div>
+                <div id="nombre-archivo">Ningún archivo seleccionado</div>
+                <button type="submit">Enviar</button>
+            </form>
+        </section>
+
+        <main id="listado"></main>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
