@@ -73,6 +73,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Borrar un dispositivo
+    const borrarDispositivo = async (userAgent) => {
+        if (!confirm('¿Estás seguro de que quieres borrar este dispositivo? Se perderá su nombre y color personalizado.')) return;
+        try {
+            await fetch(`/device/${encodeURIComponent(userAgent)}`, { method: 'DELETE' });
+        } catch (error) {
+            console.error('Error al borrar dispositivo:', error);
+        }
+    };
+
 
     // --- Renderizado ---
 
@@ -140,18 +150,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 deviceDiv.innerHTML = `
                     <input type="text" value="${device.name}" placeholder="Nombre del dispositivo">
-                    <button data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
+                    <button class="guardar-btn" data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
+                    <button class="boton-peligro borrar-dispositivo-btn" data-user-agent="${encodeURIComponent(userAgent)}">Eliminar</button>
                 `;
                 
                 dispositivosLista.appendChild(deviceDiv);
             }
 
-            // Añadir event listeners a los botones de guardar
-            dispositivosLista.querySelectorAll('button').forEach(button => {
+            // Añadir event listeners a los botones de guardar y borrar
+            dispositivosLista.querySelectorAll('.guardar-btn').forEach(button => {
                 button.addEventListener('click', () => {
                     const ua = decodeURIComponent(button.dataset.userAgent);
                     const newName = button.previousElementSibling.value;
                     renombrarDispositivo(ua, newName);
+                });
+            });
+
+            dispositivosLista.querySelectorAll('.borrar-dispositivo-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const ua = decodeURIComponent(button.dataset.userAgent);
+                    borrarDispositivo(ua);
                 });
             });
 

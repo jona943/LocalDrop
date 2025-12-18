@@ -132,6 +132,20 @@ app.get('/items', (req, res) => res.json(items.sort((a, b) => b.timestamp - a.ti
 
 app.get('/devices', (req, res) => res.json(devices));
 
+app.delete('/device/:userAgent', (req, res) => {
+    const { userAgent } = req.params;
+    if (devices[userAgent]) {
+        const deviceName = devices[userAgent].name;
+        delete devices[userAgent];
+        saveDevices();
+        logInteraction(`Dispositivo eliminado: "${deviceName}" (${userAgent})`);
+        res.status(200).send({ message: 'Dispositivo eliminado' });
+        broadcastUpdate();
+    } else {
+        res.status(404).send({ message: 'Dispositivo no encontrado' });
+    }
+});
+
 app.post('/device/rename', (req, res) => {
     const { userAgent, newName } = req.body;
     if (devices[userAgent] && newName) {
