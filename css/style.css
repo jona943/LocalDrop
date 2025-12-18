@@ -8,6 +8,7 @@
 6. Sección de Información (Acerca de)
 7. Pie de Página
 8. Estilos de Elementos (Items del listado)
+9. Media Queries (Responsividad)
 */
 
 /* 1. Variables Globales */
@@ -241,4 +242,34 @@ button[type="submit"]:hover {
 .elemento-acciones button:hover, .elemento-acciones a:hover {
     background-color: var(--border);
     color: var(--background);
+}
+
+/* 9. Media Queries (Responsividad) */
+@media (max-width: 600px) {
+    body {
+        font-size: 0.95rem;
+    }
+
+    .encabezado-principal .contenedor {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .encabezado-principal__titulo {
+        font-size: 1.25rem;
+    }
+
+    .contenido-principal {
+        padding: 1rem 0;
+    }
+
+    .formulario-contenedor {
+        padding: 1rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    .contenedor {
+        max-width: 960px;
+    }
 }
