@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - LocalDrop</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="encabezado-principal">
+        <div class="contenedor">
+            <h1 class="encabezado-principal__titulo">LocalDrop - Dashboard</h1>
+            <nav class="navegacion-principal">
+                <a href="#">Inicio</a>
+                <button id="boton-limpiar-todo" class="boton-peligro">Limpiar Todo</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="contenido-principal contenedor">
+        <section class="formulario-contenedor">
+            <form id="formulario-subida">
+                <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
+                <div class="selector-archivo-contenedor">
+                    <span>Seleccionar Archivo</span>
+                    <input type="file" id="entrada-archivo">
+                </div>
+                <div id="nombre-archivo">Ningún archivo seleccionado</div>
+                <button type="submit">Enviar</button>
+            </form>
+        </section>
+
+        <section id="listado" class="seccion-listado">
+            <!-- El contenido del listado de archivos se insertará aquí dinámicamente -->
+        </section>
+    </main>
+
+    <footer class="pie-pagina">
+        <div class="contenedor">
+            <p>&copy; 2025 LocalDrop. Estás en el panel de administrador.</p>
+        </div>
+    </footer>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

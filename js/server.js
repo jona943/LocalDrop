@@ -56,8 +56,13 @@ const getDeviceType = (userAgent) => {
 
 // 1. Servir la aplicación principal (Frontend)
 app.get('/', (req, res) => {
-    // index.html está en la raíz del proyecto, no en el mismo directorio que server.js
-    res.sendFile(path.join(__dirname, '..', 'index.html'));
+    // Si la petición viene de la misma máquina, servir el panel de admin.
+    if (req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
+        res.sendFile(path.join(__dirname, '..', 'admin.html'));
+    } else {
+        // Para el resto, servir la página de usuario normal.
+        res.sendFile(path.join(__dirname, '..', 'index.html'));
+    }
 });
 
 // 2. Obtener todos los items (textos y archivos)
@@ -99,6 +104,26 @@ app.post('/item', upload.single('file'), (req, res) => {
     res.status(201).send({ message: 'Item añadido correctamente' });
 });
 
+// 4. Borrar un item específico (sólo para admin)
+app.delete('/item/:id', (req, res) => {
+    const itemId = parseInt(req.params.id, 10);
+    const itemIndex = items.findIndex(item => item.id === itemId);
+
+    if (itemIndex > -1) {
+        items.splice(itemIndex, 1);
+        res.status(200).send({ message: 'Elemento borrado correctamente' });
+    } else {
+        res.status(404).send({ message: 'Elemento no encontrado' });
+    }
+});
+
+// 5. Borrar todos los items (sólo para admin)
+app.delete('/items', (req, res) => {
+    items = []; // Vaciar el array
+    res.status(200).send({ message: 'Todos los elementos han sido borrados' });
+});
+
+
 // --- Inicio del Servidor ---
 app.listen(PORT, '0.0.0.0', () => {
     const networkInterfaces = os.networkInterfaces();
@@ -115,6 +140,7 @@ app.listen(PORT, '0.0.0.0', () => {
     }
     console.log('-------------------------------------------');
     console.log('🚀 LocalDrop iniciado');
-    console.log(`     Servidor escuchando en http://${localIp}:${PORT}`);
+    console.log(`     URL MODO USUARIO http://${localIp}:${PORT}`);
+    console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
     console.log('-------------------------------------------');
 });
