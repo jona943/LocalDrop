@@ -355,6 +355,10 @@ button[type="submit"]:hover {
         padding: 1rem;
     }
 
+    textarea {
+        font-size: 1rem; /* Previene el zoom automático en dispositivos móviles */
+    }
+
     .dispositivo-item {
         flex-direction: column;
         align-items: stretch;
