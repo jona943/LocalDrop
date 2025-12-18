@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) formData.append('file', file);
 
         try {
+            // El servidor enviará un evento SSE que actualizará la UI
             await fetch('/item', {
                 method: 'POST',
                 body: formData,
@@ -41,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
             textInput.value = '';
             fileInput.value = null;
             fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-            fetchItems();
         } catch (error) {
             console.error('Error al enviar:', error);
             alert('Hubo un error al enviar el item.');
@@ -56,9 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            // El servidor enviará un evento SSE que actualizará la UI
             const response = await fetch('/items', { method: 'DELETE' });
             if (!response.ok) throw new Error('El servidor rechazó la petición.');
-            fetchItems(); // Refrescar para ver el feed vacío
         } catch (error) {
             console.error('Error al limpiar todo:', error);
             alert('No se pudieron borrar los elementos.');
@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            // El servidor enviará un evento SSE que actualizará la UI
             const response = await fetch(`/item/${itemId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('El servidor rechazó la petición.');
-            fetchItems(); // Refrescar el feed
         } catch (error) {
             console.error(`Error al borrar el item ${itemId}:`, error);
             alert('No se pudo borrar el elemento.');
@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Polling Inteligente ---
+    // --- Sincronización en Tiempo Real (SSE) ---
     
     const fetchItems = async () => {
         try {
@@ -164,7 +164,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Carga inicial y inicio del polling
+    // Carga inicial
     fetchItems();
-    setInterval(fetchItems, POLLING_INTERVAL);
+    
+    // Conexión al stream de eventos del servidor
+    const eventSource = new EventSource('/events');
+
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.event === 'update') {
+            console.log('Recibida actualización del servidor, refrescando...');
+            fetchItems();
+        }
+    };
+
+    eventSource.onerror = () => {
+        console.error('Error en la conexión SSE.');
+        feed.innerHTML = `<p style="color: var(--danger);">Conexión con el servidor perdida. Intentando reconectar...</p>`;
+    };
 });

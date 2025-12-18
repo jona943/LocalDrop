@@ -3,44 +3,56 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const sseExpress = require('sse-express');
 
 const app = express();
 const PORT = 3000;
 
 // --- Almacenamiento en Memoria Volátil ---
-// Guardamos los items en un array en RAM para evitar escrituras en SSD.
 let items = [];
+let clients = []; // Lista de clientes conectados para SSE
 
 // --- Creación del Directorio de Subidas ---
-// __dirname en este caso será /home/dev/Desktop/Desarrollos/LocalDrop/js
-// Queremos que uploads esté en la raíz del proyecto, no dentro de js/
-const uploadsDir = path.join(__dirname, '..', 'uploads'); // Subir un nivel para la carpeta uploads
+const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// --- Configuración de Multer para Gestión de Archivos ---
+// --- Configuración de Multer ---
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        // Usamos un timestamp para evitar colisiones de nombres.
-        cb(null, Date.now() + '-' + file.originalname);
-    }
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
+const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50MB
-});
-
-// --- Middleware para servir archivos estáticos ---
+// --- Middleware ---
 app.use('/uploads', express.static(uploadsDir));
 app.use('/css', express.static(path.join(__dirname, '..', 'css')));
 app.use('/js', express.static(path.join(__dirname, '..', 'js')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- Lógica de SSE (Server-Sent Events) ---
+
+// Función para notificar a todos los clientes
+const broadcastUpdate = () => {
+    console.log(`Notificando a ${clients.length} cliente(s)`);
+    clients.forEach(client => {
+        client.sse('message', { event: 'update' });
+    });
+};
+
+// Endpoint para que los clientes se conecten
+app.get('/events', sseExpress, (req, res) => {
+    clients.push(res);
+    console.log(`Cliente conectado. Total: ${clients.length}`);
+
+    req.on('close', () => {
+        clients = clients.filter(client => client !== res);
+        console.log(`Cliente desconectado. Total: ${clients.length}`);
+    });
+});
+
 
 // --- Función de Identificación de Dispositivos ---
 const getDeviceType = (userAgent) => {
@@ -56,71 +68,58 @@ const getDeviceType = (userAgent) => {
 
 // 1. Servir la aplicación principal (Frontend)
 app.get('/', (req, res) => {
-    // Si la petición viene de la misma máquina, servir el panel de admin.
     if (req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
         res.sendFile(path.join(__dirname, '..', 'admin.html'));
     } else {
-        // Para el resto, servir la página de usuario normal.
         res.sendFile(path.join(__dirname, '..', 'index.html'));
     }
 });
 
-// 2. Obtener todos los items (textos y archivos)
+// 2. Obtener todos los items
 app.get('/items', (req, res) => {
-    // Devolvemos los items ordenados del más nuevo al más viejo.
     res.json(items.sort((a, b) => b.timestamp - a.timestamp));
 });
 
-// 3. Subir un nuevo item (texto o archivo)
+// 3. Subir un nuevo item
 app.post('/item', upload.single('file'), (req, res) => {
     const device = getDeviceType(req.headers['user-agent']);
     const timestamp = Date.now();
 
-    // Si se sube un archivo
     if (req.file) {
-        const fileType = req.file.mimetype.split('/')[0]; // 'image', 'application', etc.
         items.push({
-            id: timestamp,
-            type: 'file',
-            device: device,
-            timestamp: timestamp,
+            id: timestamp, type: 'file', device, timestamp,
             content: req.file.filename,
             originalName: req.file.originalname,
             mimeType: req.file.mimetype
         });
     }
-
-    // Si se envía texto
     if (req.body && req.body.text) {
-        items.push({
-            id: timestamp,
-            type: 'text',
-            device: device,
-            timestamp: timestamp,
-            content: req.body.text
-        });
+        items.push({ id: timestamp, type: 'text', device, timestamp, content: req.body.text });
     }
 
     res.status(201).send({ message: 'Item añadido correctamente' });
+    broadcastUpdate(); // Notificar a los clientes
 });
 
-// 4. Borrar un item específico (sólo para admin)
+// 4. Borrar un item específico
 app.delete('/item/:id', (req, res) => {
     const itemId = parseInt(req.params.id, 10);
     const itemIndex = items.findIndex(item => item.id === itemId);
 
     if (itemIndex > -1) {
         items.splice(itemIndex, 1);
-        res.status(200).send({ message: 'Elemento borrado correctamente' });
+        res.status(200).send({ message: 'Elemento borrado' });
+        broadcastUpdate(); // Notificar a los clientes
     } else {
         res.status(404).send({ message: 'Elemento no encontrado' });
     }
 });
 
-// 5. Borrar todos los items (sólo para admin)
+// 5. Borrar todos los items
 app.delete('/items', (req, res) => {
-    items = []; // Vaciar el array
-    res.status(200).send({ message: 'Todos los elementos han sido borrados' });
+    items = [];
+    res.status(200).send({ message: 'Todos los elementos borrados' });
+    broadcastUpdate(); // Notificar a los clientes
 });
 
 
@@ -128,7 +127,6 @@ app.delete('/items', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     const networkInterfaces = os.networkInterfaces();
     let localIp = '';
-    // Buscamos la IP local en la red Wi-Fi o Ethernet
     for (const name of Object.keys(networkInterfaces)) {
         for (const net of networkInterfaces[name]) {
             if (net.family === 'IPv4' && !net.internal) {

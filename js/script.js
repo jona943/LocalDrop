@@ -31,16 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (file) formData.append('file', file);
                 
                 try {
+                    // La subida de datos ahora notificará a todos los clientes (incluido este)
+                    // a través del evento SSE, por lo que no es necesario llamar a fetchItems() aquí.
                     await fetch('/item', {
                         method: 'POST',
                         body: formData,
                     });
 
-                    // Limpiar formulario y refrescar inmediatamente
+                    // Limpiar formulario
                     textInput.value = '';
                     fileInput.value = null;
                     fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-                    fetchItems();
 
                 } catch (error) {
                     console.error('Error al enviar:', error);
@@ -110,20 +111,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             };
 
-            // --- Polling Inteligente ---
+            // --- Sincronización en Tiempo Real (SSE) ---
             
             const fetchItems = async () => {
                 try {
-                    const response = await fetch('/item');
+                    const response = await fetch('/items'); // Corregido de /item a /items
                     if (!response.ok) throw new Error('Error de red');
                     const items = await response.json();
                     renderItems(items);
                 } catch (error) {
                     console.error('Error al obtener items:', error);
+                    feed.innerHTML = `<p style="color: var(--danger);">Error al conectar con el servidor.</p>`;
                 }
             };
             
-            // Carga inicial y inicio del polling
+            // Carga inicial
             fetchItems();
-            setInterval(fetchItems, POLLING_INTERVAL);
+            
+            // Conexión al stream de eventos del servidor
+            const eventSource = new EventSource('/events');
+            
+            // Cuando el servidor envía un mensaje, refrescamos el contenido
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.event === 'update') {
+                    console.log('Recibida actualización del servidor, refrescando...');
+                    fetchItems();
+                }
+            };
+
+            eventSource.onerror = () => {
+                console.error('Error en la conexión SSE.');
+                feed.innerHTML = `<p style="color: var(--danger);">Conexión con el servidor perdida. Intentando reconectar...</p>`;
+            };
         });

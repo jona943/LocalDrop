@@ -20,6 +20,7 @@
   "homepage": "https://github.com/jona943/LocalDrop#readme",
   "dependencies": {
     "express": "^5.2.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "sse-express": "^1.0.2"
   }
 }
