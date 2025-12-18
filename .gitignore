@@ -25,3 +25,6 @@ uploads/
 
 # Registros (Logs)
 *.log
+
+# Datos de la Aplicación
+data/

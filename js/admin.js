@@ -91,10 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
             itemDiv.className = 'elemento';
             const date = new Date(item.timestamp).toLocaleString();
             
-            // Se añade el botón de borrar a las acciones del elemento
+            // Se añade el botón de borrar a las acciones del elemento y se usa el nombre y color del dispositivo
             itemDiv.innerHTML = `
                 <div class="elemento-cabecera">
-                    <span>[${item.device}]</span> @ <span>${date}</span>
+                    <span class="nombre-dispositivo" style="color: ${item.color}; font-weight: bold;">${item.deviceName}</span> @ <span>${date}</span>
                 </div>
                 <div class="elemento-contenido" id="contenido-${item.id}"></div>
                 <div class="elemento-acciones" id="acciones-${item.id}">
