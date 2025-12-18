@@ -33,7 +33,7 @@ Este es un proyecto en desarrollo, construido poco a poco.
     ```
 2.  **Iniciar el servidor:**
     ```bash
-    node js/server.js &
+    node js/server.js
     ```
     *(El servidor mostrará las URLs para el modo usuario y el modo administrador en la consola.)*
 3.  **Acceder como Administrador:**

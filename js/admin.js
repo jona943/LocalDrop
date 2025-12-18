@@ -1,3 +1,9 @@
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Referencias a Elementos del DOM ---
+    const form = document.getElementById('formulario-subida');
+    const textInput = document.getElementById('entrada-texto');
+    const fileInput = document.getElementById('entrada-archivo');
+    const fileNameDisplay = document.getElementById('nombre-archivo');
     const feed = document.getElementById('listado');
     const botonLimpiarTodo = document.getElementById('boton-limpiar-todo');
     const dispositivosLista = document.getElementById('dispositivos-lista');
