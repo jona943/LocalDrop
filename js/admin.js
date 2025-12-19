@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const dispositivosLista = document.getElementById('dispositivos-lista');
     const estadoSubida = document.getElementById('estado-subida');
 
+    let currentActiveUserAgents = []; // Variable global para User-Agents activos
+
     // --- Lógica de la Interfaz ---
 
     // Muestra el nombre del archivo seleccionado
@@ -147,7 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const fetchAndRenderDevices = async () => {
+    const fetchAndRenderDevices = async (activeUAs = currentActiveUserAgents) => {
+        console.log('Renderizando dispositivos. User-Agents activos:', activeUAs); // Log de UAs activos
         try {
             const response = await fetch('/devices');
             const devices = await response.json();
@@ -159,10 +162,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 deviceDiv.className = 'dispositivo-item';
                 deviceDiv.style.borderColor = device.color;
                 
+                const isConnected = activeUAs.includes(userAgent);
+                const statusClass = isConnected ? 'active' : 'inactive';
+
+                // Log para cada dispositivo
+                console.log(`- Dispositivo: "${device.name}", Conectado: ${isConnected}, Clase: ${statusClass}, UA: ${userAgent}`);
+
                 deviceDiv.innerHTML = `
-                    <input type="text" value="${device.name}" placeholder="Nombre del dispositivo">
-                    <button class="guardar-btn" data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
-                    <button class="boton-peligro borrar-dispositivo-btn" data-user-agent="${encodeURIComponent(userAgent)}">Eliminar</button>
+                    <div class="dispositivo-info">
+                        <span class="status-dot ${statusClass}"></span>
+                        <input type="text" value="${device.name}" placeholder="Nombre del dispositivo">
+                    </div>
+                    <div class="dispositivo-acciones">
+                        <button class="guardar-btn" data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
+                        <button class="boton-peligro borrar-dispositivo-btn" data-user-agent="${encodeURIComponent(userAgent)}">Eliminar</button>
+                    </div>
                 `;
                 
                 dispositivosLista.appendChild(deviceDiv);
@@ -172,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dispositivosLista.querySelectorAll('.guardar-btn').forEach(button => {
                 button.addEventListener('click', () => {
                     const ua = decodeURIComponent(button.dataset.userAgent);
-                    const newName = button.previousElementSibling.value;
+                    const newName = button.closest('.dispositivo-item').querySelector('input[type="text"]').value;
                     renombrarDispositivo(ua, newName);
                 });
             });
@@ -206,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Cargas iniciales
     fetchItems();
-    fetchAndRenderDevices();
+    fetchAndRenderDevices(currentActiveUserAgents); // Modificado para usar currentActiveUserAgents
     
     // Conexión al stream de eventos del servidor
     const eventSource = new EventSource('/events');
@@ -214,16 +228,23 @@ document.addEventListener('DOMContentLoaded', () => {
     eventSource.addEventListener('connections_update', (event) => {
         const connectionCount = document.getElementById('connection-count');
         if (connectionCount) {
-            connectionCount.textContent = event.data;
+            connectionCount.textContent = event.data; // event.data ya es el número
         }
     });
 
+    eventSource.addEventListener('device_statuses_update', (event) => {
+        console.log('Recibido evento device_statuses_update. Datos:', event.data); // Log de datos crudos
+        currentActiveUserAgents = JSON.parse(event.data);
+        fetchAndRenderDevices(); // Refrescar solo dispositivos con los nuevos estados
+    });
+
     eventSource.onmessage = (event) => {
+        // Este es para el evento 'update' genérico del servidor
         const data = JSON.parse(event.data);
         if (data.event === 'update') {
-            console.log('Recibida actualización del servidor, refrescando...');
+            console.log('Recibida actualización del servidor (general), refrescando...');
             fetchItems();
-            fetchAndRenderDevices(); // También refrescar la lista de dispositivos
+            fetchAndRenderDevices(); // Refrescar items y dispositivos
         }
     };
 

@@ -17,7 +17,8 @@ if (!fs.existsSync(dataDir)) {
 
 // --- Almacenamiento y Estado ---
 let items = []; // En memoria para la sesión actual
-let clients = []; // Clientes conectados para SSE
+let clients = new Map(); // Mapa de clientes conectados para SSE: [connectionId, {res, userAgent}]
+let activeUserAgents = new Set(); // User-Agents actualmente conectados
 let devices = {}; // Dispositivos conocidos
 let sessionLogStream; // Stream de escritura para el log de la sesión
 
@@ -79,30 +80,53 @@ app.use(express.urlencoded({ extended: true }));
 
 // --- Lógica de SSE (Server-Sent Events) ---
 const broadcastUpdate = () => {
-    console.log(`Notificando a ${clients.length} cliente(s)`);
-    clients.forEach(client => client.sse('message', { event: 'update' }));
+    console.log(`Notificando a ${clients.size} cliente(s)`);
+    clients.forEach(client => client.res.sse('message', { event: 'update' }));
 };
 
 const broadcastConnectionCount = () => {
-    const count = clients.length;
+    const count = clients.size;
     console.log(`Actualizando contador de conexiones: ${count}`);
-    clients.forEach(client => client.sse('message', { event: 'connections_update', data: count }));
+    clients.forEach(client => client.res.sse('connections_update', count));
+};
+
+const broadcastDeviceStatuses = () => {
+    const activeUAs = Array.from(activeUserAgents);
+    console.log(`Actualizando estado de dispositivos activos: ${activeUAs.length} UAs`);
+    clients.forEach(client => client.res.sse('device_statuses_update', activeUAs));
 };
 
 app.get('/events', sseExpress, (req, res) => {
-    clients.push(res);
-    console.log(`Cliente conectado. Total: ${clients.length}`);
+    const connectionId = Date.now() + Math.random().toString(36).substring(2, 15); // ID único para esta conexión
+    const userAgent = req.headers['user-agent'];
+    
+    clients.set(connectionId, { res, userAgent });
+    activeUserAgents.add(userAgent);
+
+    console.log(`Cliente conectado (${userAgent}). Total conexiones: ${clients.size}. UAs activos: ${activeUserAgents.size}`);
     
     // Enviar el estado actual solo a este nuevo cliente
-    res.sse('message', { event: 'connections_update', data: clients.length });
+    res.sse('connections_update', clients.size);
+    res.sse('device_statuses_update', Array.from(activeUserAgents));
 
-    // Notificar a todos (incluido el nuevo) sobre el cambio
+    // Notificar a todos sobre el cambio
     broadcastConnectionCount();
+    broadcastDeviceStatuses();
 
     req.on('close', () => {
-        clients = clients.filter(c => c !== res);
-        console.log(`Cliente desconectado. Total: ${clients.length}`);
-        broadcastConnectionCount(); // Notificar a los restantes
+        const disconnectedClient = clients.get(connectionId);
+        if (disconnectedClient) {
+            clients.delete(connectionId);
+            const remainingConnectionsForUA = Array.from(clients.values()).filter(c => c.userAgent === disconnectedClient.userAgent);
+            if (remainingConnectionsForUA.length === 0) {
+                activeUserAgents.delete(disconnectedClient.userAgent);
+            }
+        }
+        console.log(`Cliente desconectado (${userAgent}). Total conexiones: ${clients.size}. UAs activos: ${activeUserAgents.size}`);
+        
+        // Notificar a los restantes
+        broadcastConnectionCount();
+        broadcastDeviceStatuses();
     });
 });
 
