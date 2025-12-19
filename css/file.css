@@ -1,0 +1,97 @@
+.galeria-archivos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.file-card {
+    flex: 1 1 250px; /* Grow, Shrink, Basis */
+    height: 190px; /* Altura fija para todas las tarjetas */
+    overflow: hidden; /* Recortar contenido si excede la altura */
+    text-align: center;
+    transition: box-shadow 0.3s ease;
+    padding: 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    max-width: 350px; /* Añadir un max-width para evitar que crezca demasiado */
+}
+
+.file-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.file-name {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.5rem;
+}
+
+.file-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+    margin-bottom: 0.5rem;
+}
+
+.file-thumbnail,
+.file-icon {
+    max-width: 100%;
+    height: 120px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.file-date {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+/* Se han eliminado los estilos del botón de descarga para respetar el diseño del usuario */
+
+
+/* --- Media Queries para Responsividad --- */
+
+/* Para Teléfonos Móviles */
+@media (max-width: 480px) {
+    .galeria-archivos {
+        gap: 0.5rem; /* Reducir aún más el espacio */
+    }
+
+    .file-card {
+        flex: 1 1 calc(33.333% - 1rem); /* Base para 3 columnas, ajustado por el gap */
+        padding: 0.5rem;
+        height: 150px; /* Altura fija para tarjetas en móvil */
+    }
+
+    /* Ocultar solo la fecha para tarjetas de IMAGEN en móvil */
+    .file-card.is-image .file-date {
+        display: none;
+    }
+
+    /* Hacer más pequeños los previews en móvil */
+    .file-preview {
+        min-height: 80px;
+        margin-bottom: 0.2rem;
+    }
+
+    .file-thumbnail,
+    .file-icon {
+        height: 80px;
+    }
+
+    /* Para las tarjetas de iconos, hacer la fuente del nombre más pequeña */
+    .file-card.is-icon .file-name {
+        font-size: 0.8rem;
+    }
+
+     /* Ocultar la fecha también para los iconos para máxima compactación */
+    .file-card.is-icon .file-date {
+        display: none;
+    }
+}
+

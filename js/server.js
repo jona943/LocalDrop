@@ -69,11 +69,12 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-const upload = multer({ storage: storage, limits: { fileSize: 5 * 1024 * 1024 * 1024 } }); // 5GB Límite
+const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB Límite
 
 app.use('/uploads', express.static(uploadsDir));
 app.use('/css', express.static(path.join(__dirname, '..', 'css')));
 app.use('/js', express.static(path.join(__dirname, '..', 'js')));
+app.use(express.static(path.join(__dirname, '..'))); // Servir archivos estáticos del directorio raíz
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -167,9 +168,28 @@ app.get('/', (req, res) => {
     }
 });
 
+app.get('/file.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'file.html'));
+});
+
 app.get('/items', (req, res) => res.json(items.sort((a, b) => b.timestamp - a.timestamp)));
 
 app.get('/devices', (req, res) => res.json(devices));
+
+app.get('/api/files', (req, res) => {
+    fs.readdir(uploadsDir, (err, files) => {
+        if (err) {
+            console.error('Error al leer el directorio de subidas:', err);
+            return res.status(500).send('Error al obtener la lista de archivos.');
+        }
+        const fileData = files.map(file => {
+            const filePath = path.join(uploadsDir, file);
+            const stats = fs.statSync(filePath);
+            return { name: file, createdAt: stats.ctime };
+        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Ordenar por fecha descendente
+        res.json(fileData);
+    });
+});
 
 app.delete('/device/:userAgent', (req, res) => {
     const { userAgent } = req.params;
