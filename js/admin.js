@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const feed = document.getElementById('listado');
     const botonLimpiarTodo = document.getElementById('boton-limpiar-todo');
     const dispositivosLista = document.getElementById('dispositivos-lista');
+    const estadoSubida = document.getElementById('estado-subida');
 
     // --- Lógica de la Interfaz ---
 
@@ -28,13 +29,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text) formData.append('text', text);
         if (file) formData.append('file', file);
 
+        const submitButton = form.querySelector('button[type="submit"]');
+
         try {
+            submitButton.disabled = true;
+            estadoSubida.textContent = 'Subiendo archivo...';
+
             await fetch('/item', { method: 'POST', body: formData });
+            
             textInput.value = '';
             fileInput.value = null;
             fileNameDisplay.textContent = 'Ningún archivo seleccionado';
         } catch (error) {
             console.error('Error al enviar:', error);
+            alert('Hubo un error al enviar el item.');
+        } finally {
+            submitButton.disabled = false;
+            estadoSubida.textContent = '';
         }
     });
 

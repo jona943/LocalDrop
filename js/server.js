@@ -68,7 +68,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage: storage, limits: { fileSize: 5 * 1024 * 1024 * 1024 } }); // 5GB Límite
 
 app.use('/uploads', express.static(uploadsDir));
 app.use('/css', express.static(path.join(__dirname, '..', 'css')));

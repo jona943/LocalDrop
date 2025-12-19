@@ -4,9 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileInput = document.getElementById('entrada-archivo');
             const fileNameDisplay = document.getElementById('nombre-archivo');
             const feed = document.getElementById('listado');
+            const estadoSubida = document.getElementById('estado-subida');
             
-            const POLLING_INTERVAL = 4000; // 4 segundos para un balance óptimo
-
             // --- Lógica de la Interfaz ---
 
             fileInput.addEventListener('change', () => {
@@ -26,19 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                const submitButton = form.querySelector('button[type="submit"]');
+                
                 const formData = new FormData();
                 if (text) formData.append('text', text);
                 if (file) formData.append('file', file);
                 
                 try {
-                    // La subida de datos ahora notificará a todos los clientes (incluido este)
-                    // a través del evento SSE, por lo que no es necesario llamar a fetchItems() aquí.
+                    submitButton.disabled = true;
+                    estadoSubida.textContent = 'Subiendo archivo...';
+
                     await fetch('/item', {
                         method: 'POST',
                         body: formData,
                     });
 
-                    // Limpiar formulario
                     textInput.value = '';
                     fileInput.value = null;
                     fileNameDisplay.textContent = 'Ningún archivo seleccionado';
@@ -46,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Error al enviar:', error);
                     alert('Hubo un error al enviar el item.');
+                } finally {
+                    submitButton.disabled = false;
+                    estadoSubida.textContent = '';
                 }
             });
 

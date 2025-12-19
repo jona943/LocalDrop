@@ -160,6 +160,13 @@ textarea {
     font-size: 0.9rem;
 }
 
+.estado-subida {
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 0.9rem;
+    min-height: 1rem; /* Para evitar que el layout salte cuando aparece el texto */
+}
+
 button[type="submit"] {
     background-color: var(--border);
     color: var(--background);
