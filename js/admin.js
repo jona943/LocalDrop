@@ -211,6 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Conexión al stream de eventos del servidor
     const eventSource = new EventSource('/events');
 
+    eventSource.addEventListener('connections_update', (event) => {
+        const connectionCount = document.getElementById('connection-count');
+        if (connectionCount) {
+            connectionCount.textContent = event.data;
+        }
+    });
+
     eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.event === 'update') {

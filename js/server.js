@@ -82,12 +82,27 @@ const broadcastUpdate = () => {
     console.log(`Notificando a ${clients.length} cliente(s)`);
     clients.forEach(client => client.sse('message', { event: 'update' }));
 };
+
+const broadcastConnectionCount = () => {
+    const count = clients.length;
+    console.log(`Actualizando contador de conexiones: ${count}`);
+    clients.forEach(client => client.sse('message', { event: 'connections_update', data: count }));
+};
+
 app.get('/events', sseExpress, (req, res) => {
     clients.push(res);
     console.log(`Cliente conectado. Total: ${clients.length}`);
+    
+    // Enviar el estado actual solo a este nuevo cliente
+    res.sse('message', { event: 'connections_update', data: clients.length });
+
+    // Notificar a todos (incluido el nuevo) sobre el cambio
+    broadcastConnectionCount();
+
     req.on('close', () => {
         clients = clients.filter(c => c !== res);
         console.log(`Cliente desconectado. Total: ${clients.length}`);
+        broadcastConnectionCount(); // Notificar a los restantes
     });
 });
 
