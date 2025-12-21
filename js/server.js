@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const sseExpress = require('sse-express');
+const disk = require('diskusage');
 
 const app = express();
 const PORT = 3000;
@@ -189,6 +190,17 @@ app.get('/api/files', (req, res) => {
         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Ordenar por fecha descendente
         res.json(fileData);
     });
+});
+
+app.get('/api/storage', async (req, res) => {
+    try {
+        const { total, free } = await disk.check('/');
+        const used = total - free;
+        res.json({ total, used });
+    } catch (err) {
+        console.error('Error al obtener el uso del disco:', err);
+        res.status(500).send({ message: 'Error al obtener información de almacenamiento.' });
+    }
 });
 
 app.delete('/device/:userAgent', (req, res) => {

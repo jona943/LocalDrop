@@ -90,5 +90,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // fileContainer.appendChild(fileGrid); // This line is not needed
     };
 
+    const formatBytes = (bytes, decimals = 2) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    };
+
+    const fetchAndRenderStorage = async () => {
+        const usedBar = document.getElementById('storage-used-bar');
+        const statusText = document.getElementById('storage-status-text');
+        try {
+            const response = await fetch('/api/storage');
+            if (!response.ok) {
+                throw new Error('No se pudo obtener la información de almacenamiento');
+            }
+            const { total, used } = await response.json();
+            const percentage = total > 0 ? (used / total) * 100 : 0;
+            
+            usedBar.style.width = `${percentage}%`;
+            statusText.textContent = `${formatBytes(used)} de ${formatBytes(total)} usados`;
+
+        } catch (error) {
+            console.error(error);
+            statusText.textContent = 'No se pudo cargar la información de almacenamiento.';
+        }
+    };
+
     fetchAndRenderFiles();
+    fetchAndRenderStorage();
 });

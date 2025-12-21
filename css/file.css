@@ -53,6 +53,33 @@
 
 /* Se han eliminado los estilos del botón de descarga para respetar el diseño del usuario */
 
+/* --- Barra de Estado de Almacenamiento --- */
+#storage-status-section {
+    padding: 0.5rem 0;
+    text-align: center;
+}
+
+#storage-status-bar {
+    width: 100%;
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+    height: 10px;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+}
+
+#storage-used-bar {
+    height: 100%;
+    width: 0%; /* Se actualizará dinámicamente con JS */
+    background-color: #007bff;
+    transition: width 0.5s ease-in-out;
+}
+
+#storage-status-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
 
 /* --- Media Queries para Responsividad --- */
 
