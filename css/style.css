@@ -104,9 +104,16 @@ a:hover {
 
 .formulario-contenedor {
     background-color: var(--accent);
-    border: 1px solid #2c3a50;
+    border: 2px dashed #2c3a50; /* Cambiado a dashed para sugerir que es una zona de drop */
     padding: 1.5rem;
     border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.formulario-contenedor.drag-active {
+    border-color: var(--border);
+    background-color: rgba(56, 189, 248, 0.05);
+    transform: scale(1.01);
 }
 
 form {

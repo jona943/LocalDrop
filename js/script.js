@@ -5,6 +5,42 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileNameDisplay = document.getElementById('nombre-archivo');
             const feed = document.getElementById('listado');
             const estadoSubida = document.getElementById('estado-subida');
+            const formContainer = document.querySelector('.formulario-contenedor');
+            
+            // --- Lógica de Drag and Drop ---
+
+            // Evitar que el navegador abra el archivo por defecto
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                formContainer.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            // Añadir/Quitar clase visual al arrastrar
+            ['dragenter', 'dragover'].forEach(eventName => {
+                formContainer.addEventListener(eventName, () => {
+                    formContainer.classList.add('drag-active');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                formContainer.addEventListener(eventName, () => {
+                    formContainer.classList.remove('drag-active');
+                }, false);
+            });
+
+            // Manejar la caída del archivo
+            formContainer.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    // Disparar el evento change manualmente para actualizar el texto del nombre del archivo
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
             
             // --- Lógica de la Interfaz ---
 

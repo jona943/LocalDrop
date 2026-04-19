@@ -8,6 +8,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const botonLimpiarTodo = document.getElementById('boton-limpiar-todo');
     const dispositivosLista = document.getElementById('dispositivos-lista');
     const estadoSubida = document.getElementById('estado-subida');
+    const formContainer = document.querySelector('.formulario-contenedor');
+
+    // --- Lógica de Drag and Drop ---
+
+    // Evitar comportamiento por defecto del navegador
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        formContainer.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    // Efecto visual al arrastrar
+    ['dragenter', 'dragover'].forEach(eventName => {
+        formContainer.addEventListener(eventName, () => {
+            formContainer.classList.add('drag-active');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        formContainer.addEventListener(eventName, () => {
+            formContainer.classList.remove('drag-active');
+        }, false);
+    });
+
+    // Manejar el archivo soltado
+    formContainer.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+            fileInput.files = files;
+            // Actualizar el nombre mostrado
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
 
     let currentActiveUserAgents = []; // Variable global para User-Agents activos
 
