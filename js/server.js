@@ -80,7 +80,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB Límite
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 * 1024 } }); // 10GB Límite
 
 app.use('/uploads', express.static(uploadsDir));
 app.use('/css', express.static(path.join(__dirname, '..', 'css')));
@@ -329,7 +329,7 @@ app.delete('/items', (req, res) => {
 
 
 // --- Inicio del Servidor ---
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     const networkInterfaces = os.networkInterfaces();
     let localIp = '';
     for (const name of Object.keys(networkInterfaces)) {
@@ -344,7 +344,12 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('-------------------------------------------');
     console.log('🚀 LocalDrop iniciado');
     console.log(`     URL MODO USUARIO http://${localIp}:${PORT}`);
-    console.log(`     URL MODO ADMIN   http://localhost:${PORT}/admin`);
+    console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
     console.log(`     Log de sesión:    ${path.join(dataDir, logFileName)}`);
     console.log('-------------------------------------------');
 });
+
+// Aumentar el tiempo de espera del servidor para archivos muy pesados (1 hora)
+server.timeout = 3600000;
+server.keepAliveTimeout = 60000; // Un minuto de keep-alive es suficiente
+server.headersTimeout = 65000;

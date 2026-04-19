@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileNameDisplay = document.getElementById('nombre-archivo');
             const feed = document.getElementById('listado');
             const estadoSubida = document.getElementById('estado-subida');
+            const textoProgreso = document.getElementById('texto-progreso');
+            const progresoContenedor = document.getElementById('progreso-contenedor');
+            const progresoBarra = document.getElementById('progreso-barra');
             const formContainer = document.querySelector('.formulario-contenedor');
             
             // --- Lógica de Drag and Drop ---
@@ -49,8 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? fileInput.files[0].name
                     : 'Ningún archivo seleccionado';
             });
-            
-            form.addEventListener('submit', async (e) => {
+
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 
                 const text = textInput.value.trim();
@@ -62,31 +65,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const submitButton = form.querySelector('button[type="submit"]');
-                
                 const formData = new FormData();
                 if (text) formData.append('text', text);
                 if (file) formData.append('file', file);
                 
-                try {
-                    submitButton.disabled = true;
-                    estadoSubida.textContent = 'Subiendo archivo...';
+                // Usamos XMLHttpRequest para tener progreso de subida
+                const xhr = new XMLHttpRequest();
+                
+                submitButton.disabled = true;
+                progresoContenedor.style.display = 'block';
+                progresoBarra.style.width = '0%';
+                textoProgreso.textContent = 'Iniciando subida...';
 
-                    await fetch('/item', {
-                        method: 'POST',
-                        body: formData,
-                    });
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const porcentaje = Math.round((e.loaded / e.total) * 100);
+                        progresoBarra.style.width = porcentaje + '%';
+                        textoProgreso.textContent = `Subiendo: ${porcentaje}%`;
+                    }
+                });
 
-                    textInput.value = '';
-                    fileInput.value = null;
-                    fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-
-                } catch (error) {
-                    console.error('Error al enviar:', error);
-                    alert('Hubo un error al enviar el item.');
-                } finally {
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        textInput.value = '';
+                        fileInput.value = null;
+                        fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+                        textoProgreso.textContent = '¡Completado!';
+                        setTimeout(() => {
+                            progresoContenedor.style.display = 'none';
+                            textoProgreso.textContent = '';
+                        }, 2000);
+                    } else {
+                        alert('Hubo un error al enviar el item.');
+                        progresoContenedor.style.display = 'none';
+                        textoProgreso.textContent = '';
+                    }
                     submitButton.disabled = false;
-                    estadoSubida.textContent = '';
-                }
+                };
+
+                xhr.onerror = () => {
+                    alert('Error de conexión.');
+                    submitButton.disabled = false;
+                    progresoContenedor.style.display = 'none';
+                    textoProgreso.textContent = '';
+                };
+
+                xhr.open('POST', '/item');
+                xhr.send(formData);
             });
 
             // --- Renderizado de Items ---

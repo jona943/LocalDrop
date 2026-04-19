@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const botonLimpiarTodo = document.getElementById('boton-limpiar-todo');
     const dispositivosLista = document.getElementById('dispositivos-lista');
     const estadoSubida = document.getElementById('estado-subida');
+    const textoProgreso = document.getElementById('texto-progreso');
+    const progresoContenedor = document.getElementById('progreso-contenedor');
+    const progresoBarra = document.getElementById('progreso-barra');
     const formContainer = document.querySelector('.formulario-contenedor');
 
     // --- Lógica de Drag and Drop ---
@@ -56,8 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Ningún archivo seleccionado';
     });
 
-    // Envío del formulario
-    form.addEventListener('submit', async (e) => {
+    // Envío del formulario con progreso real
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
         const text = textInput.value.trim();
         const file = fileInput.files[0];
@@ -68,23 +71,48 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) formData.append('file', file);
 
         const submitButton = form.querySelector('button[type="submit"]');
+        const xhr = new XMLHttpRequest();
 
-        try {
-            submitButton.disabled = true;
-            estadoSubida.textContent = 'Subiendo archivo...';
+        submitButton.disabled = true;
+        progresoContenedor.style.display = 'block';
+        progresoBarra.style.width = '0%';
+        textoProgreso.textContent = 'Iniciando subida...';
 
-            await fetch('/item', { method: 'POST', body: formData });
-            
-            textInput.value = '';
-            fileInput.value = null;
-            fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-        } catch (error) {
-            console.error('Error al enviar:', error);
-            alert('Hubo un error al enviar el item.');
-        } finally {
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const porcentaje = Math.round((e.loaded / e.total) * 100);
+                progresoBarra.style.width = porcentaje + '%';
+                textoProgreso.textContent = `Subiendo: ${porcentaje}%`;
+            }
+        });
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                textInput.value = '';
+                fileInput.value = null;
+                fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+                textoProgreso.textContent = '¡Completado!';
+                setTimeout(() => {
+                    progresoContenedor.style.display = 'none';
+                    textoProgreso.textContent = '';
+                }, 2000);
+            } else {
+                alert('Error al enviar el item.');
+                progresoContenedor.style.display = 'none';
+                textoProgreso.textContent = '';
+            }
             submitButton.disabled = false;
-            estadoSubida.textContent = '';
-        }
+        };
+
+        xhr.onerror = () => {
+            alert('Error de conexión.');
+            submitButton.disabled = false;
+            progresoContenedor.style.display = 'none';
+            textoProgreso.textContent = '';
+        };
+
+        xhr.open('POST', '/item');
+        xhr.send(formData);
     });
 
     // --- Lógica de Administrador ---
