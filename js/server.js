@@ -12,12 +12,13 @@ const PORT = 3000;
 // --- Paths de Datos ---
 const dataDir = path.join(__dirname, '..', 'data');
 const devicesFilePath = path.join(dataDir, 'devices.json');
+const itemsFilePath = path.join(dataDir, 'items.json');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
 
 // --- Almacenamiento y Estado ---
-let items = []; // En memoria para la sesión actual
+let items = []; // Cargado desde disco
 let clients = new Map(); // Mapa de clientes conectados para SSE: [connectionId, {res, userAgent}]
 let activeUserAgents = new Set(); // User-Agents actualmente conectados
 let devices = {}; // Dispositivos conocidos
@@ -31,6 +32,15 @@ try {
     }
 } catch (error) {
     console.error('Error al cargar devices.json:', error);
+}
+
+// Cargar items persistidos
+try {
+    if (fs.existsSync(itemsFilePath)) {
+        items = JSON.parse(fs.readFileSync(itemsFilePath));
+    }
+} catch (error) {
+    console.error('Error al cargar items.json:', error);
 }
 
 // Crear log de la sesión
@@ -284,7 +294,18 @@ app.delete('/item/:id', (req, res) => {
 });
 
 app.delete('/items', (req, res) => {
+    // Borrar todos los archivos físicos en uploads
+    items.forEach(item => {
+        if (item.type === 'file') {
+            const filePath = path.join(uploadsDir, item.content);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+    });
+
     items = [];
+    saveItems(); // Limpiar el archivo JSON
     logInteraction('Todos los elementos han sido borrados');
     res.status(200).send({ message: 'Todos los elementos borrados' });
     broadcastUpdate();
@@ -310,4 +331,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
     console.log(`     Log de sesión:    ${path.join(dataDir, logFileName)}`);
     console.log('-------------------------------------------');
+});--------------------------------');
 });
