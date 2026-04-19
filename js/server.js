@@ -171,12 +171,28 @@ const getDeviceType = (userAgent) => {
 
 // --- RUTAS DE LA API ---
 app.get('/', (req, res) => {
-    getDeviceData(req.headers['user-agent']); // Registrar dispositivo al visitar la página
-    if (req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
+    const userAgent = req.headers['user-agent'];
+    let ip = req.ip || req.connection.remoteAddress;
+    
+    // Limpiar prefijos de IPv6 mapped IPv4 (ej: ::ffff:127.0.0.1 -> 127.0.0.1)
+    if (ip.includes('::ffff:')) {
+        ip = ip.split(':').pop();
+    }
+
+    getDeviceData(userAgent); 
+
+    const host = req.headers.host || '';
+    const isLocal = ip === '127.0.0.1' || ip === '::1' || host.includes('localhost') || host.includes('127.0.0.1');
+
+    if (isLocal) {
         res.sendFile(path.join(__dirname, '..', 'admin.html'));
     } else {
         res.sendFile(path.join(__dirname, '..', 'index.html'));
     }
+});
+
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'admin.html'));
 });
 
 app.get('/file.html', (req, res) => {
@@ -328,7 +344,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('-------------------------------------------');
     console.log('🚀 LocalDrop iniciado');
     console.log(`     URL MODO USUARIO http://${localIp}:${PORT}`);
-    console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
+    console.log(`     URL MODO ADMIN   http://localhost:${PORT}/admin`);
     console.log(`     Log de sesión:    ${path.join(dataDir, logFileName)}`);
     console.log('-------------------------------------------');
 });
