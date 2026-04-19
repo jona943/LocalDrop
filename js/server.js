@@ -331,5 +331,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
     console.log(`     Log de sesión:    ${path.join(dataDir, logFileName)}`);
     console.log('-------------------------------------------');
-});--------------------------------');
 });
