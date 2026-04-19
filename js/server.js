@@ -4,352 +4,203 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const sseExpress = require('sse-express');
-const disk = require('diskusage');
 
 const app = express();
 const PORT = 3000;
 
-// --- Paths de Datos ---
+// --- Configuración de Almacenamiento ---
 const dataDir = path.join(__dirname, '..', 'data');
+const uploadsDir = path.join(__dirname, '..', 'uploads');
 const devicesFilePath = path.join(dataDir, 'devices.json');
 const itemsFilePath = path.join(dataDir, 'items.json');
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
 
-// --- Almacenamiento y Estado ---
-let items = []; // Cargado desde disco
-let clients = new Map(); // Mapa de clientes conectados para SSE: [connectionId, {res, userAgent}]
-let activeUserAgents = new Set(); // User-Agents actualmente conectados
-let devices = {}; // Dispositivos conocidos
-let sessionLogStream; // Stream de escritura para el log de la sesión
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// --- Carga y Setup Inicial ---
-// Cargar dispositivos conocidos
-try {
-    if (fs.existsSync(devicesFilePath)) {
-        devices = JSON.parse(fs.readFileSync(devicesFilePath));
-    }
-} catch (error) {
-    console.error('Error al cargar devices.json:', error);
-}
+let items = [];
+let devices = {};
+let clients = new Map();
+let activeUserAgents = new Set();
 
-// Cargar items persistidos
-try {
-    if (fs.existsSync(itemsFilePath)) {
-        items = JSON.parse(fs.readFileSync(itemsFilePath));
-    }
-} catch (error) {
-    console.error('Error al cargar items.json:', error);
-}
-
-// Crear log de la sesión
-const now = new Date();
-const pad = (num) => num.toString().padStart(2, '0');
-const logFileName = `${pad(now.getFullYear()-2000)}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.log`;
-sessionLogStream = fs.createWriteStream(path.join(dataDir, logFileName), { flags: 'a' });
-sessionLogStream.write(`--- Log de sesión iniciado: ${now.toISOString()} ---\n`);
-
-
-// --- Funciones de Utilidad ---
-const saveDevices = () => {
+// --- Carga Inicial de Datos ---
+const loadData = () => {
     try {
-        fs.writeFileSync(devicesFilePath, JSON.stringify(devices, null, 2));
-    } catch (error) {
-        console.error('Error al guardar devices.json:', error);
-    }
+        if (fs.existsSync(devicesFilePath)) devices = JSON.parse(fs.readFileSync(devicesFilePath, 'utf8'));
+        if (fs.existsSync(itemsFilePath)) items = JSON.parse(fs.readFileSync(itemsFilePath, 'utf8'));
+        console.log(`✓ Datos cargados: ${items.length} items, ${Object.keys(devices).length} dispositivos.`);
+    } catch (e) { console.error('Error cargando datos:', e); }
 };
+loadData();
 
+const saveDevices = () => fs.writeFileSync(devicesFilePath, JSON.stringify(devices, null, 2));
+const saveItems = () => fs.writeFileSync(itemsFilePath, JSON.stringify(items, null, 2));
+
+// --- Lógica de Dispositivos (Inteligente y Corta) ---
 const generateColor = () => {
     const colors = ['#38bdf8', '#fb923c', '#f472b6', '#a78bfa', '#2dd4bf', '#facc15', '#4ade80'];
-    const usedColors = Object.values(devices).map(d => d.color);
-    const availableColors = colors.filter(c => !usedColors.includes(c));
-    if (availableColors.length > 0) return availableColors[0];
-    // Si se acaban los colores, genera uno aleatorio simple
-    return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    return colors[Math.floor(Math.random() * colors.length)];
 };
 
-const logInteraction = (message) => {
-    sessionLogStream.write(`[${new Date().toISOString()}] ${message}\n`);
+const getDeviceInfo = (req) => {
+    const ua = (req.headers['user-agent'] || '').toLowerCase();
+    const deviceId = req.query.deviceId || req.headers['x-device-id'] || 'anon';
+    let ip = req.ip || req.connection.remoteAddress;
+    if (ip.includes('::ffff:')) ip = ip.split(':').pop();
+
+    if (!devices[deviceId]) {
+        let os = 'Disp.';
+        let browser = 'Web';
+
+        if (ua.includes('windows')) os = 'PC Windows';
+        else if (ua.includes('android')) os = 'Android';
+        else if (ua.includes('iphone') || ua.includes('ipad')) os = 'Apple';
+        else if (ua.includes('linux')) os = 'Linux';
+        else if (ua.includes('macintosh')) os = 'Mac';
+
+        if (ua.includes('chrome')) browser = 'Chrome';
+        else if (ua.includes('firefox')) browser = 'Firefox';
+        else if (ua.includes('safari')) browser = 'Safari';
+
+        devices[deviceId] = {
+            name: `${os}`, // Nombre corto de 2 palabras
+            color: generateColor(),
+            firstSeen: new Date().toISOString(),
+            metadata: { browser, os, fullUA: req.headers['user-agent'] }
+        };
+    }
+
+    devices[deviceId].lastIp = ip;
+    devices[deviceId].lastSeen = new Date().toISOString();
+    saveDevices();
+    return devices[deviceId];
 };
 
-// --- Configuración de Multer y Middleware ---
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+// --- Middleware y Estáticos ---
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 * 1024 } }); // 10GB Límite
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 * 1024 } });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/css', express.static(path.join(__dirname, '..', 'css')));
 app.use('/js', express.static(path.join(__dirname, '..', 'js')));
-app.use(express.static(path.join(__dirname, '..'))); // Servir archivos estáticos del directorio raíz
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-
-// --- Lógica de SSE (Server-Sent Events) ---
-const broadcastUpdate = () => {
-    console.log(`Notificando a ${clients.size} cliente(s)`);
-    clients.forEach(client => client.res.sse('message', { event: 'update' }));
-};
-
-const broadcastConnectionCount = () => {
-    const count = clients.size;
-    console.log(`Actualizando contador de conexiones: ${count}`);
-    clients.forEach(client => client.res.sse('connections_update', count));
-};
-
-const broadcastDeviceStatuses = () => {
-    const activeUAs = Array.from(activeUserAgents);
-    console.log(`Actualizando estado de dispositivos activos: ${activeUAs.length} UAs`);
-    clients.forEach(client => client.res.sse('device_statuses_update', activeUAs));
+// --- Eventos en Tiempo Real (SSE) ---
+const broadcast = (event, data) => {
+    clients.forEach(c => c.res.sse(event, data));
 };
 
 app.get('/events', sseExpress, (req, res) => {
-    const connectionId = Date.now() + Math.random().toString(36).substring(2, 15); // ID único para esta conexión
-    const userAgent = req.headers['user-agent'];
+    const deviceId = req.query.deviceId || 'anon';
+    const connectionId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
     
-    clients.set(connectionId, { res, userAgent });
-    activeUserAgents.add(userAgent);
+    clients.set(connectionId, { res, deviceId });
+    activeUserAgents.add(deviceId);
 
-    console.log(`Cliente conectado (${userAgent}). Total conexiones: ${clients.size}. UAs activos: ${activeUserAgents.size}`);
-    
-    // Enviar el estado actual solo a este nuevo cliente
-    res.sse('connections_update', clients.size);
-    res.sse('device_statuses_update', Array.from(activeUserAgents));
-
-    // Notificar a todos sobre el cambio
-    broadcastConnectionCount();
-    broadcastDeviceStatuses();
+    broadcast('connections_update', clients.size);
+    broadcast('device_statuses_update', Array.from(activeUserAgents));
 
     req.on('close', () => {
-        const disconnectedClient = clients.get(connectionId);
-        if (disconnectedClient) {
-            clients.delete(connectionId);
-            const remainingConnectionsForUA = Array.from(clients.values()).filter(c => c.userAgent === disconnectedClient.userAgent);
-            if (remainingConnectionsForUA.length === 0) {
-                activeUserAgents.delete(disconnectedClient.userAgent);
-            }
-        }
-        console.log(`Cliente desconectado (${userAgent}). Total conexiones: ${clients.size}. UAs activos: ${activeUserAgents.size}`);
-        
-        // Notificar a los restantes
-        broadcastConnectionCount();
-        broadcastDeviceStatuses();
+        clients.delete(connectionId);
+        const stillIn = Array.from(clients.values()).some(c => c.deviceId === deviceId);
+        if (!stillIn) activeUserAgents.delete(deviceId);
+        broadcast('connections_update', clients.size);
+        broadcast('device_statuses_update', Array.from(activeUserAgents));
     });
 });
 
-
-// --- Lógica de Dispositivos ---
-const getDeviceData = (userAgent) => {
-    let deviceData = devices[userAgent];
-    if (!deviceData) {
-        deviceData = {
-            name: getDeviceType(userAgent),
-            color: generateColor(),
-            firstSeen: new Date().toISOString()
-        };
-        devices[userAgent] = deviceData;
-        saveDevices(); // Guardar el nuevo dispositivo
-        logInteraction(`Nuevo dispositivo detectado: ${deviceData.name} (${userAgent})`);
-    }
-    return deviceData;
-};
-
-const getDeviceType = (userAgent) => {
-    const ua = userAgent.toLowerCase();
-    if (ua.includes('iphone')) return 'iPhone';
-    if (ua.includes('android')) return 'Android';
-    if (ua.includes('linux') && !ua.includes('android')) return 'Laptop Linux';
-    if (ua.includes('windows')) return 'PC Windows';
-    return 'Dispositivo Desconocido';
-};
-
-
-// --- RUTAS DE LA API ---
+// --- API ---
 app.get('/', (req, res) => {
-    const userAgent = req.headers['user-agent'];
-    let ip = req.ip || req.connection.remoteAddress;
-    
-    // Limpiar prefijos de IPv6 mapped IPv4 (ej: ::ffff:127.0.0.1 -> 127.0.0.1)
-    if (ip.includes('::ffff:')) {
-        ip = ip.split(':').pop();
-    }
-
-    getDeviceData(userAgent); 
-
-    const host = req.headers.host || '';
-    const isLocal = ip === '127.0.0.1' || ip === '::1' || host.includes('localhost') || host.includes('127.0.0.1');
-
-    if (isLocal) {
-        res.sendFile(path.join(__dirname, '..', 'admin.html'));
-    } else {
-        res.sendFile(path.join(__dirname, '..', 'index.html'));
-    }
+    const ip = (req.ip || '').includes('127.0.0.1') || (req.ip || '').includes('::1');
+    res.sendFile(path.join(__dirname, '..', ip ? 'admin.html' : 'index.html'));
 });
 
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'admin.html'));
-});
-
-app.get('/file.html', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'file.html'));
-});
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'admin.html')));
 
 app.get('/items', (req, res) => res.json(items.sort((a, b) => b.timestamp - a.timestamp)));
 
-app.get('/devices', (req, res) => res.json(devices));
-
-app.get('/api/files', (req, res) => {
-    fs.readdir(uploadsDir, (err, files) => {
-        if (err) {
-            console.error('Error al leer el directorio de subidas:', err);
-            return res.status(500).send('Error al obtener la lista de archivos.');
-        }
-        const fileData = files.map(file => {
-            const filePath = path.join(uploadsDir, file);
-            const stats = fs.statSync(filePath);
-            return { name: file, createdAt: stats.ctime };
-        }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Ordenar por fecha descendente
-        res.json(fileData);
-    });
-});
-
-app.get('/api/storage', async (req, res) => {
-    try {
-        const { total, free } = await disk.check('/');
-        const used = total - free;
-        res.json({ total, used });
-    } catch (err) {
-        console.error('Error al obtener el uso del disco:', err);
-        res.status(500).send({ message: 'Error al obtener información de almacenamiento.' });
-    }
-});
-
-app.delete('/device/:userAgent', (req, res) => {
-    const { userAgent } = req.params;
-    if (devices[userAgent]) {
-        const deviceName = devices[userAgent].name;
-        delete devices[userAgent];
-        saveDevices();
-        logInteraction(`Dispositivo eliminado: "${deviceName}" (${userAgent})`);
-        res.status(200).send({ message: 'Dispositivo eliminado' });
-        broadcastUpdate();
-    } else {
-        res.status(404).send({ message: 'Dispositivo no encontrado' });
-    }
-});
-
-app.post('/device/rename', (req, res) => {
-    const { userAgent, newName } = req.body;
-    if (devices[userAgent] && newName) {
-        const oldName = devices[userAgent].name;
-        devices[userAgent].name = newName;
-        saveDevices();
-
-        // Actualizar el nombre en los items de la sesión actual
-        items.forEach(item => {
-            if (item.userAgent === userAgent) {
-                item.deviceName = newName;
-            }
-        });
-
-        logInteraction(`Dispositivo renombrado: de "${oldName}" a "${newName}" (${userAgent})`);
-        res.status(200).send({ message: 'Dispositivo renombrado' });
-        broadcastUpdate(); // Notificar a todos para que refresquen y vean el nuevo nombre
-    } else {
-        res.status(400).send({ message: 'Faltan datos para renombrar' });
-    }
+app.get('/devices', (req, res) => {
+    getDeviceInfo(req);
+    res.json(devices);
 });
 
 app.post('/item', upload.single('file'), (req, res) => {
-    const userAgent = req.headers['user-agent'];
-    const deviceData = getDeviceData(userAgent);
+    const dev = getDeviceInfo(req);
+    const deviceId = req.query.deviceId || req.headers['x-device-id'] || 'anon';
     const timestamp = Date.now();
-    let newItem;
+    let newItem = null;
 
     if (req.file) {
         newItem = {
-            id: timestamp, type: 'file', deviceName: deviceData.name, color: deviceData.color, timestamp, userAgent,
-            content: req.file.filename,
-            originalName: req.file.originalname,
-            mimeType: req.file.mimetype
+            id: timestamp, type: 'file', deviceName: dev.name, color: dev.color, timestamp, userAgent: deviceId,
+            content: req.file.filename, originalName: req.file.originalname, mimeType: req.file.mimetype
         };
-        logInteraction(`Archivo subido: "${req.file.originalname}" por ${deviceData.name}`);
-    }
-    if (req.body && req.body.text) {
-        newItem = { id: timestamp, type: 'text', deviceName: deviceData.name, color: deviceData.color, timestamp, userAgent, content: req.body.text };
-        logInteraction(`Texto subido: "${req.body.text}" por ${deviceData.name}`);
+    } else if (req.body.text) {
+        newItem = { id: timestamp, type: 'text', deviceName: dev.name, color: dev.color, timestamp, userAgent: deviceId, content: req.body.text };
     }
 
     if (newItem) {
         items.push(newItem);
-        res.status(201).send({ message: 'Item añadido' });
-        broadcastUpdate();
-    } else {
-        res.status(400).send({ message: 'No se envió contenido válido' });
-    }
+        saveItems();
+        res.status(201).json(newItem);
+        broadcast('update_items', { time: timestamp });
+    } else res.status(400).send('No data');
 });
 
 app.delete('/item/:id', (req, res) => {
-    const itemId = parseInt(req.params.id, 10);
-    const itemIndex = items.findIndex(item => item.id === itemId);
-
-    if (itemIndex > -1) {
-        const item = items[itemIndex];
-        items.splice(itemIndex, 1);
-        logInteraction(`Elemento borrado: ID ${itemId} ("${item.content || item.originalName}")`);
-        res.status(200).send({ message: 'Elemento borrado' });
-        broadcastUpdate();
-    } else {
-        res.status(404).send({ message: 'Elemento no encontrado' });
-    }
+    const idx = items.findIndex(i => i.id == req.params.id);
+    if (idx > -1) {
+        const item = items[idx];
+        if (item.type === 'file') {
+            const p = path.join(uploadsDir, item.content);
+            if (fs.existsSync(p)) fs.unlinkSync(p);
+        }
+        items.splice(idx, 1);
+        saveItems();
+        broadcast('update_items', { id: req.params.id });
+        res.sendStatus(200);
+    } else res.sendStatus(404);
 });
 
 app.delete('/items', (req, res) => {
-    // Borrar todos los archivos físicos en uploads
-    items.forEach(item => {
-        if (item.type === 'file') {
-            const filePath = path.join(uploadsDir, item.content);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+    items.forEach(i => {
+        if (i.type === 'file') {
+            const p = path.join(uploadsDir, i.content);
+            if (fs.existsSync(p)) fs.unlinkSync(p);
         }
     });
-
     items = [];
-    saveItems(); // Limpiar el archivo JSON
-    logInteraction('Todos los elementos han sido borrados');
-    res.status(200).send({ message: 'Todos los elementos borrados' });
-    broadcastUpdate();
+    saveItems();
+    broadcast('update_items', { action: 'clear' });
+    res.sendStatus(200);
 });
 
+app.post('/device/rename', (req, res) => {
+    const { userAgent, newName } = req.body;
+    if (devices[userAgent]) {
+        devices[userAgent].name = newName;
+        saveDevices();
+        items.forEach(i => { if (i.userAgent === userAgent) i.deviceName = newName; });
+        saveItems();
+        broadcast('update_items', { action: 'rename' });
+        res.sendStatus(200);
+    } else res.sendStatus(404);
+});
 
-// --- Inicio del Servidor ---
+app.delete('/device/:id', (req, res) => {
+    if (devices[req.params.id]) {
+        delete devices[req.params.id];
+        saveDevices();
+        res.sendStatus(200);
+    } else res.sendStatus(404);
+});
+
+// --- Servidor ---
 const server = app.listen(PORT, '0.0.0.0', () => {
-    const networkInterfaces = os.networkInterfaces();
-    let localIp = '';
-    for (const name of Object.keys(networkInterfaces)) {
-        for (const net of networkInterfaces[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                localIp = net.address;
-                break;
-            }
-        }
-        if (localIp) break;
-    }
-    console.log('-------------------------------------------');
-    console.log('🚀 LocalDrop iniciado');
-    console.log(`     URL MODO USUARIO http://${localIp}:${PORT}`);
-    console.log(`     URL MODO ADMIN   http://localhost:${PORT}`);
-    console.log(`     Log de sesión:    ${path.join(dataDir, logFileName)}`);
-    console.log('-------------------------------------------');
+    console.log(`\n🚀 LocalDrop en marcha\n   IP Local: http://${Object.values(os.networkInterfaces()).flat().find(i => i.family === 'IPv4' && !i.internal).address}:${PORT}\n`);
 });
 
-// Aumentar el tiempo de espera del servidor para archivos muy pesados (1 hora)
 server.timeout = 3600000;
-server.keepAliveTimeout = 60000; // Un minuto de keep-alive es suficiente
-server.headersTimeout = 65000;

@@ -12,55 +12,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const progresoContenedor = document.getElementById('progreso-contenedor');
     const progresoBarra = document.getElementById('progreso-barra');
     const formContainer = document.querySelector('.formulario-contenedor');
+    const modalInfo = document.getElementById('modal-info');
+    const abrirInfoBtn = document.getElementById('abrir-info');
+    const cerrarInfoBtn = document.getElementById('cerrar-info');
+
+    let currentActiveUserAgents = [];
+
+    // --- Lógica del Modal ---
+    if (abrirInfoBtn && modalInfo) {
+        abrirInfoBtn.onclick = (e) => { e.preventDefault(); modalInfo.style.display = 'flex'; };
+        cerrarInfoBtn.onclick = () => { modalInfo.style.display = 'none'; };
+        window.onclick = (e) => { if (e.target === modalInfo) modalInfo.style.display = 'none'; };
+    }
 
     // --- Lógica de Drag and Drop ---
-
-    // Evitar comportamiento por defecto del navegador
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        formContainer.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, false);
-    });
-
-    // Efecto visual al arrastrar
-    ['dragenter', 'dragover'].forEach(eventName => {
-        formContainer.addEventListener(eventName, () => {
-            formContainer.classList.add('drag-active');
-        }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        formContainer.addEventListener(eventName, () => {
-            formContainer.classList.remove('drag-active');
-        }, false);
-    });
-
-    // Manejar el archivo soltado
-    formContainer.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-
-        if (files.length > 0) {
-            fileInput.files = files;
-            // Actualizar el nombre mostrado
-            fileInput.dispatchEvent(new Event('change'));
-        }
-    });
-
-    let currentActiveUserAgents = []; // Variable global para User-Agents activos
+    if (formContainer) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+            formContainer.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); });
+        });
+        ['dragenter', 'dragover'].forEach(ev => {
+            formContainer.addEventListener(ev, () => formContainer.classList.add('drag-active'));
+        });
+        ['dragleave', 'drop'].forEach(ev => {
+            formContainer.addEventListener(ev, () => formContainer.classList.remove('drag-active'));
+        });
+        formContainer.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt.files.length > 0) {
+                fileInput.files = dt.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
 
     // --- Lógica de la Interfaz ---
+    fileInput.onchange = () => {
+        fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Ningún archivo seleccionado';
+    };
 
-    // Muestra el nombre del archivo seleccionado
-    fileInput.addEventListener('change', () => {
-        fileNameDisplay.textContent = fileInput.files.length > 0
-            ? fileInput.files[0].name
-            : 'Ningún archivo seleccionado';
-    });
-
-    // Envío del formulario con progreso real
-    form.addEventListener('submit', (e) => {
+    // Envío del formulario
+    form.onsubmit = (e) => {
         e.preventDefault();
         const text = textInput.value.trim();
         const file = fileInput.files[0];
@@ -70,250 +61,160 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text) formData.append('text', text);
         if (file) formData.append('file', file);
 
-        const submitButton = form.querySelector('button[type="submit"]');
         const xhr = new XMLHttpRequest();
+        const submitButton = form.querySelector('button[type="submit"]');
 
         submitButton.disabled = true;
-        progresoContenedor.style.display = 'block';
-        progresoBarra.style.width = '0%';
-        textoProgreso.textContent = 'Iniciando subida...';
+        if (progresoContenedor) progresoContenedor.style.display = 'block';
+        if (progresoBarra) progresoBarra.style.width = '0%';
+        if (textoProgreso) textoProgreso.textContent = 'Subiendo...';
 
-        xhr.upload.addEventListener('progress', (e) => {
+        xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
-                const porcentaje = Math.round((e.loaded / e.total) * 100);
-                progresoBarra.style.width = porcentaje + '%';
-                textoProgreso.textContent = `Subiendo: ${porcentaje}%`;
+                const porc = Math.round((e.loaded / e.total) * 100);
+                if (progresoBarra) progresoBarra.style.width = porc + '%';
+                if (textoProgreso) textoProgreso.textContent = `Subiendo: ${porc}%`;
             }
-        });
+        };
 
         xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 textInput.value = '';
                 fileInput.value = null;
                 fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-                textoProgreso.textContent = '¡Completado!';
+                if (textoProgreso) textoProgreso.textContent = '¡Hecho!';
                 setTimeout(() => {
-                    progresoContenedor.style.display = 'none';
-                    textoProgreso.textContent = '';
+                    if (progresoContenedor) progresoContenedor.style.display = 'none';
+                    if (textoProgreso) textoProgreso.textContent = '';
                 }, 2000);
-            } else {
-                alert('Error al enviar el item.');
-                progresoContenedor.style.display = 'none';
-                textoProgreso.textContent = '';
-            }
+            } else { alert('Error al enviar.'); }
             submitButton.disabled = false;
         };
-
-        xhr.onerror = () => {
-            alert('Error de conexión.');
-            submitButton.disabled = false;
-            progresoContenedor.style.display = 'none';
-            textoProgreso.textContent = '';
-        };
-
+        xhr.onerror = () => { alert('Error.'); submitButton.disabled = false; };
         xhr.open('POST', '/item');
         xhr.send(formData);
-    });
+    };
 
     // --- Lógica de Administrador ---
-
-    // Limpiar todo el feed
-    botonLimpiarTodo.addEventListener('click', async () => {
-        if (!confirm('¿Estás seguro de que quieres borrar todos los elementos?')) return;
-        try {
-            await fetch('/items', { method: 'DELETE' });
-        } catch (error) {
-            console.error('Error al limpiar todo:', error);
-        }
-    });
-
-    // Borrar un item individual
-    const borrarItem = async (itemId) => {
-        if (!confirm('¿Estás seguro de que quieres borrar este elemento?')) return;
-        try {
-            await fetch(`/item/${itemId}`, { method: 'DELETE' });
-        } catch (error) {
-            console.error(`Error al borrar el item ${itemId}:`, error);
-        }
+    botonLimpiarTodo.onclick = async () => {
+        if (!confirm('¿Borrar todo el historial?')) return;
+        await fetch('/items', { method: 'DELETE' });
     };
 
-    // Renombrar un dispositivo
-    const renombrarDispositivo = async (userAgent, nuevoNombre) => {
-        try {
-            await fetch('/device/rename', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userAgent, newName: nuevoNombre })
-            });
-        } catch (error) {
-            console.error('Error al renombrar:', error);
-        }
+    const borrarItem = async (id) => {
+        if (!confirm('¿Borrar este item?')) return;
+        await fetch(`/item/${id}`, { method: 'DELETE' });
     };
 
-    // Borrar un dispositivo
-    const borrarDispositivo = async (userAgent) => {
-        if (!confirm('¿Estás seguro de que quieres borrar este dispositivo? Se perderá su nombre y color personalizado.')) return;
-        try {
-            await fetch(`/device/${encodeURIComponent(userAgent)}`, { method: 'DELETE' });
-        } catch (error) {
-            console.error('Error al borrar dispositivo:', error);
-        }
+    const renombrarDispositivo = async (ua, newName) => {
+        await fetch('/device/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userAgent: ua, newName })
+        });
     };
 
+    const borrarDispositivo = async (ua) => {
+        if (!confirm('¿Eliminar dispositivo?')) return;
+        await fetch(`/device/${encodeURIComponent(ua)}`, { method: 'DELETE' });
+    };
 
     // --- Renderizado ---
-
     const renderItems = (items) => {
         feed.innerHTML = '';
         items.forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'elemento';
-            const date = new Date(item.timestamp).toLocaleString();
-            
-            itemDiv.innerHTML = `
+            const div = document.createElement('div');
+            div.className = 'elemento';
+            div.innerHTML = `
                 <div class="elemento-cabecera">
-                    <span class="nombre-dispositivo" style="color: ${item.color}; font-weight: bold;">${item.deviceName}</span> @ <span>${date}</span>
+                    <span style="color: ${item.color}; font-weight: bold;">${item.deviceName}</span> @ ${new Date(item.timestamp).toLocaleString()}
                 </div>
-                <div class="elemento-contenido" id="contenido-${item.id}"></div>
-                <div class="elemento-acciones" id="acciones-${item.id}">
-                    <button class="boton-peligro" data-id="${item.id}">Borrar</button>
+                <div class="elemento-contenido" id="cont-${item.id}"></div>
+                <div class="elemento-acciones" id="acc-${item.id}">
+                    <button class="boton-peligro" onclick="borrarItem(${item.id})">Borrar</button>
                 </div>
             `;
+            feed.appendChild(div);
 
-            const contentDiv = itemDiv.querySelector(`#contenido-${item.id}`);
-            const actionsDiv = itemDiv.querySelector(`#acciones-${item.id}`);
+            const cDiv = document.getElementById(`cont-${item.id}`);
+            const aDiv = document.getElementById(`acc-${item.id}`);
 
             if (item.type === 'text') {
                 const pre = document.createElement('pre');
                 pre.textContent = item.content;
-                contentDiv.appendChild(pre);
-                const copyBtn = document.createElement('button');
-                copyBtn.textContent = 'Copiar';
-                copyBtn.onclick = () => navigator.clipboard.writeText(item.content);
-                actionsDiv.insertBefore(copyBtn, actionsDiv.firstChild);
-            } else if (item.type === 'file') {
+                cDiv.appendChild(pre);
+            } else {
                 if (item.mimeType && item.mimeType.startsWith('image/')) {
                     const img = document.createElement('img');
                     img.src = `/uploads/${item.content}`;
-                    contentDiv.appendChild(img);
+                    cDiv.appendChild(img);
                 } else {
                     const p = document.createElement('p');
                     p.textContent = `Archivo: ${item.originalName}`;
-                    contentDiv.appendChild(p);
+                    cDiv.appendChild(p);
                 }
-                const downloadLink = document.createElement('a');
-                downloadLink.href = `/uploads/${item.content}`;
-                downloadLink.textContent = 'Descargar';
-                downloadLink.download = item.originalName;
-                actionsDiv.insertBefore(downloadLink, actionsDiv.firstChild);
+                const link = document.createElement('a');
+                link.href = `/uploads/${item.content}`;
+                link.textContent = 'Descargar';
+                link.download = item.originalName;
+                aDiv.insertBefore(link, aDiv.firstChild);
             }
-
-            feed.appendChild(itemDiv);
-            itemDiv.querySelector(`.boton-peligro[data-id="${item.id}"]`).addEventListener('click', () => borrarItem(item.id));
         });
     };
 
-    const fetchAndRenderDevices = async (activeUAs = currentActiveUserAgents) => {
-        console.log('Renderizando dispositivos. User-Agents activos:', activeUAs); // Log de UAs activos
-        try {
-            const response = await fetch('/devices');
-            const devices = await response.json();
-            dispositivosLista.innerHTML = '';
-
-            for (const userAgent in devices) {
-                const device = devices[userAgent];
-                const deviceDiv = document.createElement('div');
-                deviceDiv.className = 'dispositivo-item';
-                deviceDiv.style.borderColor = device.color;
-                
-                const isConnected = activeUAs.includes(userAgent);
-                const statusClass = isConnected ? 'active' : 'inactive';
-
-                // Log para cada dispositivo
-                console.log(`- Dispositivo: "${device.name}", Conectado: ${isConnected}, Clase: ${statusClass}, UA: ${userAgent}`);
-
-                deviceDiv.innerHTML = `
-                    <div class="dispositivo-info">
-                        <span class="status-dot ${statusClass}"></span>
-                        <input type="text" value="${device.name}" placeholder="Nombre del dispositivo">
-                    </div>
-                    <div class="dispositivo-acciones">
-                        <button class="guardar-btn" data-user-agent="${encodeURIComponent(userAgent)}">Guardar</button>
-                        <button class="boton-peligro borrar-dispositivo-btn" data-user-agent="${encodeURIComponent(userAgent)}">Eliminar</button>
-                    </div>
-                `;
-                
-                dispositivosLista.appendChild(deviceDiv);
-            }
-
-            // Añadir event listeners a los botones de guardar y borrar
-            dispositivosLista.querySelectorAll('.guardar-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const ua = decodeURIComponent(button.dataset.userAgent);
-                    const newName = button.closest('.dispositivo-item').querySelector('input[type="text"]').value;
-                    renombrarDispositivo(ua, newName);
-                });
-            });
-
-            dispositivosLista.querySelectorAll('.borrar-dispositivo-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const ua = decodeURIComponent(button.dataset.userAgent);
-                    borrarDispositivo(ua);
-                });
-            });
-
-        } catch (error) {
-            console.error('Error al obtener dispositivos:', error);
-        }
-    };
-
-
-    // --- Sincronización en Tiempo Real (SSE) ---
-    
     const fetchItems = async () => {
-        try {
-            const response = await fetch('/items');
-            if (!response.ok) throw new Error('Error de red');
-            const items = await response.json();
-            renderItems(items);
-        } catch (error) {
-            console.error('Error al obtener items:', error);
-            feed.innerHTML = `<p style="color: var(--danger);">Error al conectar con el servidor.</p>`;
-        }
+        const res = await fetch('/items');
+        renderItems(await res.json());
     };
-    
-    // Cargas iniciales
+
+    const fetchAndRenderDevices = async (activeUAs = currentActiveUserAgents) => {
+        const res = await fetch('/devices');
+        const devices = await res.json();
+        dispositivosLista.innerHTML = '';
+        for (const ua in devices) {
+            const dev = devices[ua];
+            const isConnected = activeUAs.includes(ua);
+            const div = document.createElement('div');
+            div.className = 'dispositivo-item';
+            div.style.borderColor = dev.color;
+            div.innerHTML = `
+                <div class="dispositivo-info">
+                    <span class="status-dot ${isConnected ? 'active' : 'inactive'}"></span>
+                    <input type="text" value="${dev.name}">
+                </div>
+                <div class="dispositivo-acciones">
+                    <button class="save-btn" data-ua="${encodeURIComponent(ua)}">Guardar</button>
+                    <button class="boton-peligro del-btn" data-ua="${encodeURIComponent(ua)}">X</button>
+                </div>
+            `;
+            dispositivosLista.appendChild(div);
+        }
+        dispositivosLista.querySelectorAll('.save-btn').forEach(b => {
+            b.onclick = () => renombrarDispositivo(decodeURIComponent(b.dataset.ua), b.closest('.dispositivo-item').querySelector('input').value);
+        });
+        dispositivosLista.querySelectorAll('.del-btn').forEach(b => {
+            b.onclick = () => borrarDispositivo(decodeURIComponent(b.dataset.ua));
+        });
+    };
+
+    // --- Globales para que funcionen los onclick inline ---
+    window.borrarItem = borrarItem;
+
+    // --- Tiempo Real (SSE) ---
     fetchItems();
-    fetchAndRenderDevices(currentActiveUserAgents); // Modificado para usar currentActiveUserAgents
+    fetchAndRenderDevices();
+
+    // Obtener deviceId de localstorage para admin también
+    const deviceId = localStorage.getItem('localDrop_deviceId') || 'admin';
     
-    // Conexión al stream de eventos del servidor
-    const eventSource = new EventSource('/events');
-
-    eventSource.addEventListener('connections_update', (event) => {
-        const connectionCount = document.getElementById('connection-count');
-        if (connectionCount) {
-            connectionCount.textContent = event.data; // event.data ya es el número
-        }
+    const eventSource = new EventSource(`/events?deviceId=${deviceId}`);
+    eventSource.addEventListener('update_items', () => { fetchItems(); });
+    eventSource.addEventListener('device_statuses_update', (e) => {
+        currentActiveUserAgents = JSON.parse(e.data);
+        fetchAndRenderDevices();
     });
-
-    eventSource.addEventListener('device_statuses_update', (event) => {
-        console.log('Recibido evento device_statuses_update. Datos:', event.data); // Log de datos crudos
-        currentActiveUserAgents = JSON.parse(event.data);
-        fetchAndRenderDevices(); // Refrescar solo dispositivos con los nuevos estados
+    eventSource.addEventListener('connections_update', (e) => {
+        const el = document.getElementById('connection-count');
+        if (el) el.textContent = e.data;
     });
-
-    eventSource.onmessage = (event) => {
-        // Este es para el evento 'update' genérico del servidor
-        const data = JSON.parse(event.data);
-        if (data.event === 'update') {
-            console.log('Recibida actualización del servidor (general), refrescando...');
-            fetchItems();
-            fetchAndRenderDevices(); // Refrescar items y dispositivos
-        }
-    };
-
-    eventSource.onerror = () => {
-        console.error('Error en la conexión SSE.');
-        feed.innerHTML = `<p style="color: var(--danger);">Conexión con el servidor perdida. Intentando reconectar...</p>`;
-    };
 });
