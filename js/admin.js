@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('ld_role') !== 'admin') {
+        window.location.href = '/';
+        return;
+    }
     // --- Referencias a Elementos del DOM ---
     const form = document.getElementById('formulario-subida');
     const textInput = document.getElementById('entrada-texto');

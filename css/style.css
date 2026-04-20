@@ -1,28 +1,22 @@
 /*
---- ÍNDICE DE ESTILOS ---
-1. Variables Globales (:root)
-2. Estilos Generales (body, *, etc.)
-3. Contenedor
-4. Encabezado y Navegación
-5. Contenido Principal (Formulario y Listado)
-6. Sección de Información (Acerca de)
-7. Pie de Página
-8. Estilos de Elementos (Items del listado)
-9. Gestión de Dispositivos (Admin)
-10. Media Queries (Responsividad)
+--- LOCALDROP MODERN THEME ---
+Basado en el diseño original con mejoras de accesibilidad
 */
 
-/* 1. Variables Globales */
 :root {
-    --background: #12181F;
-    --foreground: #E2E8F0;
-    --accent: #1E293B;
-    --border: #38BDF8;
+    --primary: #38bdf8;
+    --primary-hover: #0ea5e9;
+    --bg-main: #0b0f1a;
+    --bg-card: #161b2a;
+    --text-main: #f8fafc;
     --text-muted: #94a3b8;
-    --danger: #F43F5E;
+    --border: rgba(255, 255, 255, 0.1);
+    --admin-accent: #f59e0b;
+    --danger: #ef4444;
+    --radius: 12px;
+    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
 }
 
-/* 2. Estilos Generales */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -30,378 +24,253 @@
 }
 
 body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, sans-serif;
     line-height: 1.6;
 }
 
-a {
-    color: var(--border);
-    text-decoration: none;
-    transition: opacity 0.2s ease;
-}
-
-a:hover {
-    opacity: 0.8;
-}
-
-/* 3. Contenedor */
 .contenedor {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 1.5rem;
 }
 
-/* 4. Encabezado y Navegación */
-.encabezado-principal {
-    background-color: var(--accent);
-    padding: 1rem 0;
-    border-bottom: 1px solid #2c3a50;
-}
-
-.encabezado-principal .contenedor {
+/* --- Landing Page (Estilo Original) --- */
+.landing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-main);
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    z-index: 1000;
+    text-align: center;
+}
+
+.landing-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+}
+
+.landing-title span { color: var(--primary); }
+
+.landing-subtitle {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    margin-bottom: 2.5rem;
+}
+
+/* --- Botones --- */
+.btn-principal {
+    background: var(--primary);
+    color: #000;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-principal:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.btn-secundario {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* --- Modales --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 2.5rem;
+    border-radius: var(--radius);
+    max-width: 450px;
+    width: 90%;
+    box-shadow: var(--shadow);
+}
+
+.input-group input {
+    width: 100%;
+    padding: 1rem;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: white;
+    margin: 1.5rem 0;
+}
+
+.info-registro {
+    background: rgba(0,0,0,0.3);
+    padding: 1.2rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary);
+}
+
+.credencial-item code {
+    display: block;
+    background: #000;
+    padding: 0.8rem;
+    color: var(--primary);
+    font-family: monospace;
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+}
+
+/* --- Layout Principal --- */
+.encabezado-principal {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .encabezado-principal__titulo {
     font-size: 1.5rem;
-    text-shadow: 0 0 8px var(--border);
+    font-weight: 700;
+    color: var(--primary);
 }
 
-.navegacion-principal {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-}
+.navegacion-principal { display: flex; gap: 1.5rem; }
+.navegacion-principal a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+.navegacion-principal a:hover { color: var(--primary); }
 
-.navegacion-principal .boton-peligro {
-    background-color: var(--danger);
-    color: var(--foreground);
-    border: none;
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    transition: opacity 0.2s ease;
-}
-
-.navegacion-principal .boton-peligro:hover {
-    opacity: 0.85;
-}
-
-/* 5. Contenido Principal (Formulario y Listado) */
-.contenido-principal {
-    padding: 2rem 1rem;
-    display: flex;
-    flex-direction: column;
+.grid-layout {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 2rem;
+    padding: 2rem 0;
 }
 
-.formulario-contenedor {
-    background-color: var(--accent);
-    border: 2px dashed #2c3a50; /* Cambiado a dashed para sugerir que es una zona de drop */
+@media (min-width: 1024px) {
+    .grid-layout { grid-template-columns: 300px 1fr 250px; }
+}
+
+.formulario-contenedor, .widget-lateral, .elemento {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     padding: 1.5rem;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.formulario-contenedor.drag-active {
-    border-color: var(--border);
-    background-color: rgba(56, 189, 248, 0.05);
-    transform: scale(1.01);
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    border-radius: var(--radius);
 }
 
 textarea {
-    background-color: var(--background);
-    color: var(--foreground);
+    width: 100%;
+    background: #000;
     border: 1px solid var(--border);
-    padding: 0.75rem;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 80px;
-    border-radius: 4px;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    resize: none;
+    margin-bottom: 1rem;
 }
 
+/* --- Selector de Archivos Personalizado --- */
 .selector-archivo-contenedor {
     position: relative;
-    overflow: hidden;
-    display: inline-block;
-    border: 1px solid var(--border);
-    padding: 0.75rem 1rem;
-    cursor: pointer;
+    border: 2px dashed var(--border);
+    padding: 2rem;
     text-align: center;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-
-.selector-archivo-contenedor:hover {
-    background-color: rgba(56, 189, 248, 0.1);
-}
-
-.selector-archivo-contenedor input[type=file] {
-    position: absolute;
-    left: 0;
-    top: 0;
-    opacity: 0;
+    border-radius: 10px;
     cursor: pointer;
-    width: 100%;
-    height: 100%;
-}
-
-#nombre-archivo {
-    font-style: italic;
-    color: var(--text-muted);
-    margin-top: 0.5rem;
-    text-align: center;
-    font-size: 0.9rem;
-}
-
-.estado-subida {
-    color: var(--text-muted);
-    text-align: center;
-    font-size: 0.9rem;
-    min-height: 1rem; /* Para evitar que el layout salte cuando aparece el texto */
-}
-
-button[type="submit"] {
-    background-color: var(--border);
-    color: var(--background);
-    border: none;
-    padding: 0.85rem;
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-    text-transform: uppercase;
-    border-radius: 4px;
-    transition: opacity 0.2s ease;
-}
-
-button[type="submit"]:hover {
-    opacity: 0.85;
-}
-
-.seccion-listado {
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-}
-
-
-/* 6. Sección de Información (Acerca de) */
-.seccion-informacion {
-    background-color: var(--accent);
-    padding: 2rem 0;
-    border-top: 1px solid #2c3a50;
-}
-
-.seccion-informacion h2 {
-    margin-bottom: 1rem;
-    color: var(--border);
-}
-
-
-/* 7. Pie de Página */
-.pie-pagina {
-    text-align: center;
-    padding: 2rem 0;
-    margin-top: 2rem;
-    border-top: 1px solid #2c3a50;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-/* 8. Estilos de Elementos (Items del listado) */
-.elemento {
-    background-color: var(--accent);
-    border: 1px solid #2c3a50;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    border-radius: 8px;
-}
-
-.elemento-cabecera {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.elemento-contenido pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-family: inherit;
-    color: var(--foreground);
-    line-height: 1.5;
-}
-
-.elemento-contenido img {
-    max-width: 100%;
-    height: auto;
-    max-height: 200px;
-    object-fit: contain;
-    border: 1px solid #2c3a50;
-    border-radius: 4px;
-    margin-top: 0.5rem;
-}
-
-.elemento-acciones {
-    margin-top: 0.5rem;
-    display: flex;
+    align-items: center;
     gap: 0.5rem;
 }
 
-.elemento-acciones button, .elemento-acciones a {
-    background-color: var(--background);
-    color: var(--foreground);
-    border: 1px solid var(--border);
-    padding: 0.5rem 1rem;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    border-radius: 4px;
+.selector-archivo-contenedor:hover {
+    background: rgba(56, 189, 248, 0.05);
+    border-color: var(--primary);
+}
+
+.selector-archivo-contenedor::before {
+    content: '📁';
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.selector-archivo-contenedor span {
     font-size: 0.9rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
-.elemento-acciones button:hover, .elemento-acciones a:hover {
-    background-color: var(--border);
-    color: var(--background);
+.selector-archivo-contenedor input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
 }
 
-.elemento-acciones .boton-peligro {
-    border-color: var(--danger);
+#nombre-archivo {
+    font-size: 0.8rem;
+    color: var(--primary);
+    text-align: center;
+    margin-top: 1rem;
+    min-height: 1.2rem;
+    font-style: italic;
 }
 
-.elemento-acciones .boton-peligro:hover {
-    background-color: var(--danger);
-    color: var(--foreground);
+.formulario-contenedor.drag-active .selector-archivo-contenedor {
+    background: rgba(56, 189, 248, 0.1);
+    border-color: var(--primary);
+    transform: scale(1.02);
 }
 
-/* 9. Gestión de Dispositivos (Admin) */
-.seccion-gestion-dispositivos {
-    padding: 2rem 0;
-    border-top: 1px solid #2c3a50;
-}
-
-.seccion-gestion-dispositivos h2 {
-    margin-bottom: 1.5rem;
-    color: var(--border);
-}
-
-#dispositivos-lista {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.dispositivo-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background-color: var(--accent);
+button[type="submit"] {
+    width: 100%;
+    background: var(--primary);
+    color: #000;
+    border: none;
     padding: 1rem;
     border-radius: 8px;
-    border-left: 5px solid; /* El color se pondrá con JS */
+    font-weight: 700;
+    cursor: pointer;
 }
 
-.dispositivo-item input {
-    flex-grow: 1;
-    background-color: var(--background);
-    color: var(--foreground);
-    border: 1px solid #2c3a50;
-    padding: 0.5rem;
-    border-radius: 4px;
-}
-
-.dispositivo-item button {
-    background-color: var(--border);
-    color: var(--background);
-    border: none;
+.elemento-cabecera { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; }
+.elemento-acciones { margin-top: 1rem; display: flex; gap: 0.5rem; }
+.elemento-acciones a, .elemento-acciones button {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: white;
     padding: 0.5rem 1rem;
     border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: opacity 0.2s ease;
+    text-decoration: none;
+    font-size: 0.8rem;
 }
 
-.dispositivo-item button:hover {
-    opacity: 0.85;
-}
-
-.dispositivo-item .boton-peligro {
-    background-color: var(--danger);
-    color: var(--foreground);
-}
-
-/* Nuevos estilos para el punto de estado */
-.status-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 5px;
-    border: 1px solid var(--text-muted); /* Un borde sutil para definición */
-    flex-shrink: 0; /* Asegura que el dot no se encoja */
-}
-
-.status-dot.active {
-    background-color: #22c55e; /* Verde para activo */
-    border-color: #16a34a;
-}
-
-.status-dot.inactive {
-    background-color: #64748b; /* Gris para inactivo */
-    border-color: #475569;
-}
-
-
-/* 10. Media Queries (Responsividad) */
-@media (max-width: 600px) {
-    body {
-        font-size: 0.95rem;
-    }
-
-    .encabezado-principal .contenedor {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .encabezado-principal__titulo {
-        font-size: 1.25rem;
-    }
-
-    .contenido-principal {
-        padding: 1rem 0;
-    }
-
-    .formulario-contenedor {
-        padding: 1rem;
-    }
-
-    textarea {
-        font-size: 1rem; /* Previene el zoom automático en dispositivos móviles */
-    }
-
-    .dispositivo-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
-
-@media (min-width: 1200px) {
-    .contenedor {
-        max-width: 960px;
-    }
-}
+.pie-pagina { padding: 4rem 0; text-align: center; color: var(--text-muted); font-size: 0.8rem; }

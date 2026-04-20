@@ -1,44 +1,46 @@
-# LocalDrop
+# LocalDrop 🚀
 
 ## La Idea
-LocalDrop es un proyecto personal para crear una herramienta simple y súper ligera que permita compartir texto y archivos en una red local. La meta es construir algo que consuma la menor cantidad de recursos posible, ideal para hardware antiguo o de bajo rendimiento.
+LocalDrop es una herramienta ultra-ligera diseñada para compartir texto y archivos de forma instantánea en una red local. El enfoque principal es la simplicidad y el bajo consumo de recursos, ideal para revivir hardware antiguo o simplemente para transferencias rápidas sin depender de la nube.
 
-Este es un proyecto en desarrollo, construido poco a poco.
+## Dominio Local: localdrop.home
+Para una experiencia premium en tu red local, puedes configurar el dominio **http://localdrop.home**.
 
-## Estado Actual del Prototipo
+### ¿Cómo configurarlo?
+Debes añadir la IP de tu servidor a los archivos `hosts` de tus dispositivos:
+*   **Windows:** `C:\Windows\System32\drivers\etc\hosts`
+*   **Linux/Mac:** `/etc/hosts`
 
-### Características Principales:
+Añade esta línea al final:
+`192.168.X.X  localdrop.home` (Sustituye la IP por la que muestra la consola al iniciar).
 
-*   **Modos de Usuario:** Implementación de dos roles para la experiencia de usuario:
-    *   **Administrador:** Acceso a un dashboard especial (vía `http://localhost:3000` en la máquina del servidor) que permite subir, ver, y **eliminar** mensajes o archivos.
-    *   **Usuario Común:** Acceso a la vista de usuario estándar (vía `http://<IP_LOCAL>:3000` desde cualquier dispositivo en la red) para ver y subir contenido.
-*   **Sincronización en Tiempo Real:** Todos los dispositivos conectados se actualizan instantáneamente (sin necesidad de recargar) gracias al uso de Server-Sent Events (SSE), mostrando el contenido más reciente.
+## Características Principales
 
-### Detalles Técnicos:
+### 🛡️ Seguridad y Acceso
+*   **Pantalla de Bienvenida:** Landing page con presentación de la herramienta.
+*   **Registro Obligatorio:** Modal de acceso que solicita nombre/apodo.
+*   **Credenciales Automáticas:** Generación de contraseña de 8 caracteres (letras y números) y detección automática de dispositivo para mayor seguridad.
 
-*   **Backend (Node.js + Express):**
-    *   Un servidor que acepta texto y archivos (hasta 50MB).
-    *   Los textos se guardan en memoria para no desgastar el disco.
-    *   Los archivos se guardan en una carpeta `/uploads`.
-    *   Gestiona las conexiones SSE para las actualizaciones en tiempo real.
-*   **Frontend (HTML + Vanilla JS):**
-    *   Dos interfaces de página única (SPA) distintas (`index.html` para usuarios, `admin.html` para administradores) sin frameworks.
-    *   Permite copiar texto y descargar archivos.
+### 🔄 Sincronización en Tiempo Real
+Gracias a los **Server-Sent Events (SSE)**, todos los dispositivos conectados reciben actualizaciones al instante sin necesidad de recargar la página.
 
-## Cómo Probarlo
+### 🖼️ Galería de Archivos
+Nueva sección de **Galería** donde puedes visualizar todos los archivos subidos, con iconos específicos por tipo de archivo, previsualización de imágenes y barra de estado de almacenamiento real.
+
+### 🛡️ Roles Automáticos
+*   **Modo Administrador:** Acceso total desde `localhost`.
+*   **Modo Usuario:** Acceso estándar para el resto de la red.
+
+## Cómo Empezar
 
 1.  **Instalar dependencias:**
     ```bash
-    npm install express multer sse-express
+    npm install
     ```
 2.  **Iniciar el servidor:**
     ```bash
     node js/server.js
     ```
-    *(El servidor mostrará las URLs para el modo usuario y el modo administrador en la consola.)*
-3.  **Acceder como Administrador:**
-    Abre tu navegador en la máquina del servidor y navega a: `http://localhost:3000`
-4.  **Acceder como Usuario Común:**
-    Abre tu navegador en cualquier otro dispositivo de la red local y navega a: `http://<TU_IP_LOCAL>:3000`
 
-
+---
+*Construido con dedicacion para ser rápido, accesible y seguro en tu hogar.*

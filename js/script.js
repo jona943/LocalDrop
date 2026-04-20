@@ -1,241 +1,172 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Gestión de Identidad y Cookies ---
-    const checkCookies = () => {
-        const consent = localStorage.getItem('localDrop_consent');
-        if (!consent) {
-            const banner = document.createElement('div');
-            banner.className = 'cookie-banner';
-            banner.style.display = 'block';
-            banner.innerHTML = `
-                <p>Utilizamos almacenamiento local para recordar tu dispositivo y preferencias.</p>
-                <div class="cookie-actions">
-                    <button class="btn-accept" id="cookie-accept">Aceptar</button>
-                    <button class="btn-decline" id="cookie-decline">Rechazar</button>
-                </div>
-            `;
-            document.body.appendChild(banner);
-            document.getElementById('cookie-accept').onclick = () => {
-                localStorage.setItem('localDrop_consent', 'true');
-                banner.style.display = 'none';
-            };
-            document.getElementById('cookie-decline').onclick = () => {
-                banner.style.display = 'none';
-            };
-        }
+    // Inyectar Header y Configuración Inicial
+    LocalDropUtils.injectHeader();
+    
+    const landingPage = document.getElementById('landing-page');
+    const modalRegistro = document.getElementById('modal-registro');
+    const headerPrincipal = document.querySelector('.encabezado-principal');
+    const contenidoPrincipal = document.querySelector('.contenido-principal');
+
+    // --- Lógica de Landing y Registro ---
+    const btnEmpezarPublico = document.getElementById('btn-empezar-publico');
+    const btnEmpezarAdmin = document.getElementById('btn-empezar-admin');
+    const btnGenerarAcceso = document.getElementById('btn-generar-acceso');
+    const btnEntrar = document.getElementById('btn-entrar');
+    const inputNombre = document.getElementById('nombre-usuario');
+    const infoRegistro = document.getElementById('info-registro');
+    const sectionPublic = document.getElementById('section-public');
+    const sectionAdmin = document.getElementById('section-admin');
+    const linkShowAdmin = document.getElementById('link-show-admin');
+    const linkShowPublic = document.getElementById('link-show-public');
+    const btnLoginAdmin = document.getElementById('btn-login-admin');
+
+    // --- Redirecciones de Sesión ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLanding = urlParams.get('view') === 'landing';
+
+    if (isLanding) {
+        localStorage.removeItem('ld_user');
+        localStorage.removeItem('ld_role');
+        headerPrincipal.style.display = 'none';
+    } else if (localStorage.getItem('ld_role') === 'admin') {
+        window.location.href = '/admin';
+    } else if (localStorage.getItem('ld_user')) {
+        landingPage.style.display = 'none';
+        modalRegistro.style.display = 'none';
+        headerPrincipal.style.display = 'block';
+        contenidoPrincipal.style.display = 'block';
+    } else {
+        headerPrincipal.style.display = 'none';
+    }
+
+    btnEmpezarPublico.onclick = () => {
+        landingPage.style.display = 'none';
+        modalRegistro.style.display = 'flex';
+        sectionPublic.style.display = 'block';
+        sectionAdmin.style.display = 'none';
     };
 
-    const getDeviceId = () => {
-        let id = localStorage.getItem('localDrop_deviceId');
-        if (!id) {
-            id = 'dev_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('localDrop_deviceId', id);
-        }
-        return id;
+    btnEmpezarAdmin.onclick = () => {
+        landingPage.style.display = 'none';
+        modalRegistro.style.display = 'flex';
+        sectionPublic.style.display = 'none';
+        sectionAdmin.style.display = 'block';
     };
 
-    const deviceId = getDeviceId();
-    checkCookies();
+    linkShowAdmin.onclick = (e) => { e.preventDefault(); sectionPublic.style.display = 'none'; sectionAdmin.style.display = 'block'; };
+    linkShowPublic.onclick = (e) => { e.preventDefault(); sectionAdmin.style.display = 'none'; sectionPublic.style.display = 'block'; };
 
-    // --- Referencias a Elementos ---
+    btnLoginAdmin.onclick = async () => {
+        const user = document.getElementById('admin-user').value;
+        const pass = document.getElementById('admin-pass').value;
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, pass })
+            });
+            if (response.ok) {
+                localStorage.setItem('ld_role', 'admin');
+                window.location.href = '/admin';
+            } else alert('Credenciales incorrectas.');
+        } catch (err) { console.error(err); }
+    };
+
+    btnGenerarAcceso.onclick = () => {
+        const nombre = inputNombre.value.trim();
+        if (!nombre) return alert('Introduce un nombre.');
+        document.getElementById('reg-dispositivo').textContent = detectarDispositivo();
+        document.getElementById('reg-password').textContent = generarPassword();
+        infoRegistro.style.display = 'block';
+        btnGenerarAcceso.style.display = 'none';
+        btnEntrar.style.display = 'block';
+        inputNombre.disabled = true;
+        localStorage.setItem('ld_user', nombre);
+    };
+
+    btnEntrar.onclick = async () => {
+        await fetch('/devices'); // Sincronizar nombre
+        modalRegistro.style.display = 'none';
+        headerPrincipal.style.display = 'block';
+        contenidoPrincipal.style.display = 'block';
+    };
+
+    const generarPassword = (l = 8) => {
+        const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let p = ''; for (let i = 0; i < l; i++) p += c.charAt(Math.floor(Math.random() * c.length));
+        return p;
+    };
+
+    const detectarDispositivo = () => {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('windows')) return 'PC Windows';
+        if (ua.includes('android')) return 'Android';
+        if (ua.includes('iphone') || ua.includes('ipad')) return 'Apple';
+        if (ua.includes('linux')) return 'Linux';
+        return 'Dispositivo';
+    };
+
+    // --- Lógica del Panel ---
     const form = document.getElementById('formulario-subida');
-    const textInput = document.getElementById('entrada-texto');
-    const fileInput = document.getElementById('entrada-archivo');
-    const fileNameDisplay = document.getElementById('nombre-archivo');
     const feed = document.getElementById('listado');
-    const progresoContenedor = document.getElementById('progreso-contenedor');
-    const progresoBarra = document.getElementById('progreso-barra');
-    const textoProgreso = document.getElementById('texto-progreso');
-    const formContainer = document.querySelector('.formulario-contenedor');
     const listaDispositivosMini = document.getElementById('lista-dispositivos-mini');
-    
-    const modalInfo = document.getElementById('modal-info');
-    const abrirInfoBtn = document.getElementById('abrir-info');
-    const cerrarInfoBtn = document.getElementById('cerrar-info');
 
-    // --- Lógica del Modal ---
-    if (abrirInfoBtn && modalInfo) {
-        abrirInfoBtn.onclick = (e) => { e.preventDefault(); modalInfo.style.display = 'flex'; };
-        if (cerrarInfoBtn) cerrarInfoBtn.onclick = () => { modalInfo.style.display = 'none'; };
-        window.onclick = (e) => { if (e.target === modalInfo) modalInfo.style.display = 'none'; };
-    }
-
-    // --- Lógica de Dispositivos ---
-    const fetchAndRenderDevices = async (activeUAs = []) => {
-        try {
-            const response = await fetch('/devices', { headers: { 'x-device-id': deviceId } });
-            const devices = await response.json();
-            if (listaDispositivosMini) {
-                listaDispositivosMini.innerHTML = '';
-                Object.keys(devices).forEach(ua => {
-                    const device = devices[ua];
-                    const isConnected = activeUAs.includes(ua);
-                    const item = document.createElement('div');
-                    item.className = 'dispositivo-mini-item';
-                    item.innerHTML = `
-                        <span class="status-indicator ${isConnected ? 'status-online' : 'status-offline'}"></span>
-                        <span style="color: ${device.color}; font-weight: 500;">${device.name}</span>
-                    `;
-                    listaDispositivosMini.appendChild(item);
-                });
-            }
-        } catch (error) { console.error('Error dispositivos:', error); }
+    const renderItem = (item) => {
+        const div = document.createElement('div');
+        div.className = 'elemento';
+        const isFile = item.type === 'file';
+        const ext = isFile ? LocalDropUtils.getFileExtension(item.content) : '';
+        const isImage = isFile && item.content.match(/\.(jpeg|jpg|gif|png|svg)$/i);
+        
+        div.innerHTML = `
+            <div class="elemento-cabecera" style="color: ${item.color}">${item.deviceName} • ${new Date(item.timestamp).toLocaleTimeString()}</div>
+            <div class="elemento-contenido">
+                ${isFile ? (isImage ? `<img src="/uploads/${item.content}">` : `<p>Archivo: ${item.originalName}</p>`) : `<pre>${item.content}</pre>`}
+            </div>
+            <div class="elemento-acciones">
+                ${isFile ? `<a href="/uploads/${item.content}" download="${item.originalName}">Descargar</a>` : `<button onclick="navigator.clipboard.writeText('${item.content}')">Copiar</button>`}
+            </div>
+        `;
+        return div;
     };
 
-    // --- Interfaz Archivos ---
-    if (fileInput) {
-        fileInput.onchange = () => {
-            fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Ningún archivo seleccionado';
-        };
-    }
-
-    // --- Drag and Drop ---
-    if (formContainer) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
-            formContainer.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); });
-        });
-        ['dragenter', 'dragover'].forEach(ev => {
-            formContainer.addEventListener(ev, () => formContainer.classList.add('drag-active'));
-        });
-        ['dragleave', 'drop'].forEach(ev => {
-            formContainer.addEventListener(ev, () => formContainer.classList.remove('drag-active'));
-        });
-        formContainer.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            if (dt.files.length > 0) {
-                fileInput.files = dt.files;
-                fileInput.dispatchEvent(new Event('change'));
-            }
-        });
-    }
-
-    // --- Envío de Formulario ---
-    if (form) {
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const text = textInput.value.trim();
-            const file = fileInput.files[0];
-            if (!text && !file) return;
-
-            const formData = new FormData();
-            if (text) formData.append('text', text);
-            if (file) formData.append('file', file);
-
-            const xhr = new XMLHttpRequest();
-            const submitButton = form.querySelector('button[type="submit"]');
-
-            submitButton.disabled = true;
-            if (progresoContenedor) progresoContenedor.style.display = 'block';
-            if (progresoBarra) progresoBarra.style.width = '0%';
-
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const porc = Math.round((e.loaded / e.total) * 100);
-                    if (progresoBarra) progresoBarra.style.width = porc + '%';
-                    if (textoProgreso) textoProgreso.textContent = `Subiendo: ${porc}%`;
-                }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    textInput.value = '';
-                    fileInput.value = null;
-                    fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-                    setTimeout(() => {
-                        if (progresoContenedor) progresoContenedor.style.display = 'none';
-                        if (textoProgreso) textoProgreso.textContent = '';
-                    }, 2000);
-                }
-                submitButton.disabled = false;
-            };
-            xhr.open('POST', '/item');
-            xhr.setRequestHeader('x-device-id', deviceId);
-            xhr.send(formData);
-        };
-    }
-
-    // --- Renderizado de Mensajes ---
-    const renderItems = (items) => {
-        if (!feed) return;
+    const updateFeed = async () => {
+        const res = await fetch('/items');
+        const items = await res.json();
         feed.innerHTML = '';
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'elemento';
-            div.innerHTML = `
-                <div class="elemento-cabecera">
-                    <span style="color: ${item.color}; font-weight: bold;">${item.deviceName}</span> @ ${new Date(item.timestamp).toLocaleString()}
-                </div>
-                <div class="elemento-contenido" id="cont-${item.id}"></div>
-                <div class="elemento-acciones" id="acc-${item.id}"></div>
-            `;
-            feed.appendChild(div);
-
-            const cDiv = document.getElementById(`cont-${item.id}`);
-            const aDiv = document.getElementById(`acc-${item.id}`);
-
-            if (item.type === 'text') {
-                const pre = document.createElement('pre');
-                pre.textContent = item.content;
-                cDiv.appendChild(pre);
-                const btn = document.createElement('button');
-                btn.textContent = 'Copiar';
-                btn.onclick = () => {
-                    navigator.clipboard.writeText(item.content);
-                    btn.textContent = '¡Copiado!';
-                    setTimeout(() => btn.textContent = 'Copiar', 2000);
-                };
-                aDiv.appendChild(btn);
-            } else {
-                if (item.mimeType && item.mimeType.startsWith('image/')) {
-                    const img = document.createElement('img');
-                    img.src = `/uploads/${item.content}`;
-                    cDiv.appendChild(img);
-                } else {
-                    const p = document.createElement('p');
-                    p.textContent = `Archivo: ${item.originalName}`;
-                    cDiv.appendChild(p);
-                }
-                const link = document.createElement('a');
-                link.href = `/uploads/${item.content}`;
-                link.textContent = 'Descargar';
-                link.download = item.originalName;
-                aDiv.appendChild(link);
-            }
-        });
+        items.forEach(i => feed.appendChild(renderItem(i)));
     };
 
-    const fetchItems = async () => {
-        try {
-            const res = await fetch('/items');
-            const data = await res.json();
-            renderItems(data);
-        } catch (e) { console.error('Error items:', e); }
+    const updateDevices = async (activeUAs = []) => {
+        const res = await fetch('/devices');
+        const devices = await res.json();
+        if (listaDispositivosMini) {
+            listaDispositivosMini.innerHTML = '';
+            Object.keys(devices).forEach(ua => {
+                const dev = devices[ua];
+                const item = document.createElement('div');
+                item.className = 'dispositivo-mini-item';
+                item.innerHTML = `<span class="status-indicator ${activeUAs.includes(ua) ? 'status-online' : 'status-offline'}"></span><span style="color: ${dev.color}">${dev.name}</span>`;
+                listaDispositivosMini.appendChild(item);
+            });
+        }
     };
 
-    // --- TIEMPO REAL (SSE) ---
-    fetchItems();
-    fetchAndRenderDevices();
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        const file = document.getElementById('entrada-archivo').files[0];
+        const text = document.getElementById('entrada-texto').value;
+        if (file) formData.append('file', file);
+        if (text) formData.append('text', text);
+        await fetch('/item', { method: 'POST', body: formData });
+        form.reset();
+        document.getElementById('nombre-archivo').textContent = 'Ningún archivo seleccionado';
+    };
+
+    const ev = new EventSource(`/events?deviceId=${LocalDropUtils.getDeviceId()}`);
+    ev.addEventListener('update_items', updateFeed);
+    ev.addEventListener('device_statuses_update', (e) => updateDevices(JSON.parse(e.data)));
     
-    const eventSource = new EventSource(`/events?deviceId=${deviceId}`);
-    
-    // Listener universal para cualquier mensaje del servidor
-    eventSource.onmessage = (e) => {
-        console.log('Mensaje SSE recibido:', e.data);
-        fetchItems();
-        fetchAndRenderDevices();
-    };
-
-    // Listener específico para actualización de items
-    eventSource.addEventListener('update_items', () => {
-        console.log('Evento update_items -> Refrescando');
-        fetchItems();
-    });
-
-    eventSource.addEventListener('device_statuses_update', (e) => {
-        const uas = JSON.parse(e.data);
-        fetchAndRenderDevices(uas);
-    });
-
-    eventSource.onerror = () => {
-        console.warn('Conexión SSE perdida. Reconectando...');
-    };
+    updateFeed();
 });

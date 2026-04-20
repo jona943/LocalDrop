@@ -1,124 +1,64 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Configuración de Identidad y Header
+    LocalDropUtils.setupInterceptor();
+    LocalDropUtils.injectHeader();
+
     const fileContainer = document.getElementById('galeria-archivos');
 
-    const extensionIcons = {
-        'pdf': '/img/extenciones-iconos/pdf.png',
-        'txt': '/img/extenciones-iconos/txt.png',
-        'js': '/img/extenciones-iconos/js.png',
-        'css': '/img/extenciones-iconos/css.png',
-        'py': '/img/extenciones-iconos/py.png',
-        // Añade más extensiones e iconos aquí si es necesario
-    };
-
-    const getFileExtension = (filename) => {
-        return filename.split('.').pop().toLowerCase();
-    };
-
+    // 2. Función para obtener y renderizar archivos
     const fetchAndRenderFiles = async () => {
         try {
             const response = await fetch('/api/files');
-            if (!response.ok) {
-                throw new Error(`Error al obtener los archivos: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error('Error al obtener archivos');
             const files = await response.json();
-            renderFiles(files);
-        } catch (error) {
-            console.error(error);
-            fileContainer.innerHTML = '<p>Error al cargar los archivos. Inténtalo de nuevo más tarde.</p>';
-        }
-    };
-
-    const renderFiles = (files) => {
-        if (files.length === 0) {
-            fileContainer.innerHTML = '<p>No hay archivos subidos todavía.</p>';
-            return;
-        }
-
-        fileContainer.innerHTML = ''; // Limpiar el contenedor
-        // const fileGrid = document.createElement('div'); // This line is not needed as fileContainer is already #galeria-archivos
-        // fileGrid.className = 'file-grid'; // This is handled by fileContainer
-
-        files.forEach(file => {
-            const fileCard = document.createElement('div');
-            fileCard.className = 'file-card';
-
-            const fileNameElem = document.createElement('p');
-            fileNameElem.className = 'file-name';
-            fileNameElem.textContent = file.name;
             
-            const filePreview = document.createElement('div');
-            filePreview.className = 'file-preview'; // Contenedor para la imagen/icono
-
-            const fileExtension = getFileExtension(file.name);
-            const isImage = file.name.match(/\.(jpeg|jpg|gif|png|svg)$/i);
-
-            if (isImage) {
-                fileCard.classList.add('is-image'); // Añadir clase para tarjetas de imagen
-                const thumbnail = document.createElement('img');
-                thumbnail.src = `/uploads/${file.name}`;
-                thumbnail.className = 'file-thumbnail';
-                filePreview.appendChild(thumbnail);
-            } else {
-                fileCard.classList.add('is-icon'); // Añadir clase para tarjetas de icono
-                const iconPath = extensionIcons[fileExtension] || '/img/extenciones-iconos/archivo-roto.png'; // Usar icono de archivo roto si no se encuentra
-                // Solo crear el elemento de imagen si se tiene una ruta de icono (ya sea específica o fallback)
-                if (iconPath) {
-                    const icon = document.createElement('img');
-                    icon.src = iconPath;
-                    icon.className = 'file-icon'; // Nueva clase para iconos de archivo
-                    icon.alt = `Icono de ${fileExtension}`;
-                    filePreview.appendChild(icon);
-                }
+            if (files.length === 0) {
+                fileContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay archivos subidos todavía.</p>';
+                return;
             }
 
-            const fileDateElem = document.createElement('p');
-            fileDateElem.className = 'file-date';
-            fileDateElem.textContent = new Date(file.createdAt).toLocaleString();
+            fileContainer.innerHTML = '';
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
 
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `/uploads/${file.name}`;
-            downloadLink.textContent = 'Descargar';
-            downloadLink.className = 'download-button';
-            downloadLink.download = file.name;
+                const ext = LocalDropUtils.getFileExtension(file.name);
+                const isImage = file.name.match(/\.(jpeg|jpg|gif|png|svg)$/i);
+                const iconPath = LocalDropUtils.extensionIcons[ext] || LocalDropUtils.extensionIcons.default;
 
-            fileCard.appendChild(fileNameElem);
-            fileCard.appendChild(filePreview);
-            fileCard.appendChild(fileDateElem);
-            fileCard.appendChild(downloadLink);
-            fileContainer.appendChild(fileCard); // Añadir la tarjeta directamente al fileContainer
-        });
-        // fileContainer.appendChild(fileGrid); // This line is not needed
+                fileCard.innerHTML = `
+                    <p class="file-name" title="${file.name}">${file.name}</p>
+                    <div class="file-preview ${isImage ? 'is-image' : 'is-icon'}">
+                        ${isImage ? `<img src="/uploads/${file.name}" class="file-thumbnail">` : `<img src="${iconPath}" class="file-icon">`}
+                    </div>
+                    <p class="file-date">${new Date(file.createdAt).toLocaleString()}</p>
+                    <a href="/uploads/${file.name}" class="download-button" download="${file.name}">Descargar</a>
+                `;
+                fileContainer.appendChild(fileCard);
+            });
+        } catch (error) {
+            console.error('Error Galería:', error);
+            fileContainer.innerHTML = '<p style="text-align: center; color: var(--danger);">Error al cargar la galería.</p>';
+        }
     };
 
-    const formatBytes = (bytes, decimals = 2) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const dm = decimals < 0 ? 0 : decimals;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-    };
-
+    // 3. Estado del almacenamiento
     const fetchAndRenderStorage = async () => {
         const usedBar = document.getElementById('storage-used-bar');
         const statusText = document.getElementById('storage-status-text');
         try {
             const response = await fetch('/api/storage');
-            if (!response.ok) {
-                throw new Error('No se pudo obtener la información de almacenamiento');
-            }
             const { total, used } = await response.json();
             const percentage = total > 0 ? (used / total) * 100 : 0;
             
-            usedBar.style.width = `${percentage}%`;
-            statusText.textContent = `${formatBytes(used)} de ${formatBytes(total)} usados`;
-
+            if (usedBar) usedBar.style.width = `${percentage}%`;
+            if (statusText) statusText.textContent = `${LocalDropUtils.formatBytes(used)} de ${LocalDropUtils.formatBytes(total)} usados`;
         } catch (error) {
-            console.error(error);
-            statusText.textContent = 'No se pudo cargar la información de almacenamiento.';
+            console.error('Error Storage:', error);
         }
     };
 
+    // Ejecución inicial
     fetchAndRenderFiles();
     fetchAndRenderStorage();
 });

@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const sseExpress = require('sse-express');
+const diskusage = require('diskusage');
 
 const app = express();
 const PORT = 3000;
@@ -44,29 +45,36 @@ const generateColor = () => {
 const getDeviceInfo = (req) => {
     const ua = (req.headers['user-agent'] || '').toLowerCase();
     const deviceId = req.query.deviceId || req.headers['x-device-id'] || 'anon';
+    const customName = req.query.userName || req.headers['x-user-name'];
     let ip = req.ip || req.connection.remoteAddress;
     if (ip.includes('::ffff:')) ip = ip.split(':').pop();
 
     if (!devices[deviceId]) {
-        let os = 'Disp.';
+        let osName = 'Disp.';
         let browser = 'Web';
 
-        if (ua.includes('windows')) os = 'PC Windows';
-        else if (ua.includes('android')) os = 'Android';
-        else if (ua.includes('iphone') || ua.includes('ipad')) os = 'Apple';
-        else if (ua.includes('linux')) os = 'Linux';
-        else if (ua.includes('macintosh')) os = 'Mac';
+        if (ua.includes('windows')) osName = 'PC Windows';
+        else if (ua.includes('android')) osName = 'Android';
+        else if (ua.includes('iphone') || ua.includes('ipad')) osName = 'Apple';
+        else if (ua.includes('linux')) osName = 'Linux';
+        else if (ua.includes('macintosh')) osName = 'Mac';
 
         if (ua.includes('chrome')) browser = 'Chrome';
         else if (ua.includes('firefox')) browser = 'Firefox';
         else if (ua.includes('safari')) browser = 'Safari';
 
         devices[deviceId] = {
-            name: `${os}`, // Nombre corto de 2 palabras
+            os: osName,
+            userName: customName || '',
+            name: customName ? `${osName} - ${customName}` : osName,
             color: generateColor(),
             firstSeen: new Date().toISOString(),
-            metadata: { browser, os, fullUA: req.headers['user-agent'] }
+            metadata: { browser, os: osName, fullUA: req.headers['user-agent'] }
         };
+    } else if (customName && devices[deviceId].userName !== customName) {
+        // Actualizar nombre si ha cambiado o se ha registrado
+        devices[deviceId].userName = customName;
+        devices[deviceId].name = `${devices[deviceId].os} - ${customName}`;
     }
 
     devices[deviceId].lastIp = ip;
@@ -113,18 +121,62 @@ app.get('/events', sseExpress, (req, res) => {
 });
 
 // --- API ---
-app.get('/', (req, res) => {
-    const ip = (req.ip || '').includes('127.0.0.1') || (req.ip || '').includes('::1');
-    res.sendFile(path.join(__dirname, '..', ip ? 'admin.html' : 'index.html'));
+app.post('/login', (req, res) => {
+    const { user, pass } = req.body;
+    if (user === 'admin' && pass === 'admin') {
+        res.json({ role: 'admin' });
+    } else {
+        res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
 });
 
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'admin.html')));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+app.get('/admin', (req, res) => {
+    // Aquí podrías añadir una validación de sesión más robusta, 
+    // pero por ahora serviremos el archivo.
+    res.sendFile(path.join(__dirname, '..', 'admin.html'));
+});
+
+app.get('/file.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'file.html'));
+});
 
 app.get('/items', (req, res) => res.json(items.sort((a, b) => b.timestamp - a.timestamp)));
 
 app.get('/devices', (req, res) => {
     getDeviceInfo(req);
     res.json(devices);
+});
+
+app.get('/api/files', (req, res) => {
+    fs.readdir(uploadsDir, (err, files) => {
+        if (err) return res.status(500).json({ error: 'No se pudieron leer los archivos' });
+        
+        const fileList = files.map(file => {
+            const stats = fs.statSync(path.join(uploadsDir, file));
+            return {
+                name: file,
+                createdAt: stats.birthtime
+            };
+        }).sort((a, b) => b.createdAt - a.createdAt);
+        
+        res.json(fileList);
+    });
+});
+
+app.get('/api/storage', async (req, res) => {
+    try {
+        const info = await diskusage.check(os.platform() === 'win32' ? 'C:' : '/');
+        res.json({
+            total: info.total,
+            used: info.total - info.available
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'No se pudo obtener info de almacenamiento' });
+    }
 });
 
 app.post('/item', upload.single('file'), (req, res) => {
@@ -200,7 +252,13 @@ app.delete('/device/:id', (req, res) => {
 
 // --- Servidor ---
 const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 LocalDrop en marcha\n   IP Local: http://${Object.values(os.networkInterfaces()).flat().find(i => i.family === 'IPv4' && !i.internal).address}:${PORT}\n`);
+    const localIP = Object.values(os.networkInterfaces())
+        .flat()
+        .find(i => i.family === 'IPv4' && !i.internal).address;
+
+    console.log(`\n🚀 LocalDrop en marcha`);
+    console.log(`   Acceso por Dominio:  http://localdrop.home:3000`);
+    console.log(`   Acceso por IP:       http://${localIP}:${PORT}\n`);
 });
 
 server.timeout = 3600000;

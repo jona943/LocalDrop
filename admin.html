@@ -6,48 +6,82 @@
     <title>Admin - LocalDrop</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="body-admin">
     <header class="encabezado-principal">
         <div class="contenedor">
-            <h1 class="encabezado-principal__titulo">LocalDrop - Dashboard</h1>
+            <h1 class="encabezado-principal__titulo">LocalDrop <span class="badge-admin">Dashboard</span></h1>
             <div class="estado-conexion">
-                Dispositivos Conectados: <strong id="connection-count">0</strong>
+                Conexiones: <strong id="connection-count">0</strong>
             </div>
             <nav class="navegacion-principal">
-                <a href="/">Inicio</a>
+                <a href="/?view=landing">Inicio</a>
+                <a href="/">Panel</a>
                 <a href="file.html">Archivos</a>
-                <button id="boton-limpiar-todo" class="boton-peligro">Limpiar Todo</button>
+                <button id="boton-limpiar-todo" class="boton-peligro" style="margin-left: 1rem;">Limpiar</button>
             </nav>
         </div>
     </header>
 
     <main class="contenido-principal contenedor">
-        <section class="formulario-contenedor">
-            <form id="formulario-subida">
-                <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
-                <div class="selector-archivo-contenedor">
-                    <span>Seleccionar Archivo</span>
-                    <input type="file" id="entrada-archivo">
-                </div>
-                <div id="nombre-archivo">Ningún archivo seleccionado</div>
-                <div id="estado-subida" class="estado-subida"></div>
-                <button type="submit">Enviar</button>
-            </form>
-        </section>
+        <div class="grid-layout">
+            <!-- Columna 1: Enviar (Admin) -->
+            <aside class="columna-izquierda">
+                <section class="formulario-contenedor">
+                    <form id="formulario-subida">
+                        <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
+                        <div class="selector-archivo-contenedor">
+                            <span>Seleccionar Archivo</span>
+                            <input type="file" id="entrada-archivo">
+                        </div>
+                        <div id="nombre-archivo">Ningún archivo seleccionado</div>
+                        <div id="estado-subida" class="estado-subida">
+                            <div class="progreso-contenedor" id="progreso-contenedor">
+                                <div class="progreso-barra" id="progreso-barra"></div>
+                            </div>
+                            <span id="texto-progreso"></span>
+                        </div>
+                        <button type="submit">Enviar</button>
+                    </form>
+                </section>
+            </aside>
 
-        <section id="listado" class="seccion-listado">
-            <!-- El contenido del listado de archivos se insertará aquí dinámicamente -->
-        </section>
+            <!-- Columna 2: Mensajes -->
+            <section id="listado" class="seccion-listado columna-central">
+                <!-- El contenido del listado de archivos se insertará aquí dinámicamente -->
+            </section>
+
+            <!-- Columna 3: Gestión de Dispositivos -->
+            <aside class="columna-derecha">
+                <section class="widget-lateral">
+                    <h3>Gestión de Dispositivos</h3>
+                    <div id="dispositivos-lista">
+                        <!-- La lista de dispositivos detallada para el admin -->
+                    </div>
+                </section>
+            </aside>
+        </div>
     </main>
 
-    <section class="seccion-gestion-dispositivos">
-        <div class="contenedor">
-            <h2>Gestión de Dispositivos</h2>
-            <div id="dispositivos-lista">
-                <!-- La lista de dispositivos se renderizará aquí -->
+    <!-- Modal de Información -->
+    <div class="modal-overlay" id="modal-info">
+        <div class="modal-content">
+            <button class="modal-close" id="cerrar-info">&times;</button>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.5rem; color: var(--admin-color);">LocalDrop Dashboard</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Panel de control para gestionar la red local.</p>
+            </div>
+            <div class="modal-features">
+                <div class="modal-feature-item">
+                    <h3>🛠️ Gestión</h3>
+                    <p>Renombra o elimina dispositivos de la red.</p>
+                </div>
+                <div class="modal-feature-item">
+                    <h3>🧹 Mantenimiento</h3>
+                    <p>Borra mensajes o archivos compartidos.</p>
+                </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <footer class="pie-pagina">
         <div class="contenedor">

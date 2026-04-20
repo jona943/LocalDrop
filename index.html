@@ -7,42 +7,125 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header class="encabezado-principal">
-        <div class="contenedor">
-            <h1 class="encabezado-principal__titulo">LocalDrop</h1>
-            <nav class="navegacion-principal">
-                <a href="/">Inicio</a>
-                <a href="file.html">Archivos</a>
-                <a href="#acerca-de">Acerca de</a>
-            </nav>
+    <!-- Pantalla de Inicio / Landing -->
+    <div id="landing-page" class="landing-overlay">
+        <div class="landing-content">
+            <h1 class="landing-title">LocalDrop<span>.home</span></h1>
+            <p class="landing-subtitle">Comparte archivos y texto en tu red local de forma segura y ultrarrápida.</p>
+            <div class="landing-features">
+                <span>⚡ 0 configuración</span>
+                <span>🔒 Encriptación local</span>
+                <span>🚀 Máxima velocidad</span>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                <button id="btn-empezar-publico" class="btn-principal">Acceso Público</button>
+                <button id="btn-empezar-admin" class="btn-secundario">Acceso Administrador</button>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <main class="contenido-principal contenedor">
-        <section class="formulario-contenedor">
-            <form id="formulario-subida">
-                <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
-                <div class="selector-archivo-contenedor">
-                    <span>Seleccionar Archivo</span>
-                    <input type="file" id="entrada-archivo">
+    <!-- Modal de Registro / Seguridad -->
+    <div id="modal-registro" class="modal-overlay">
+        <div class="modal-content registration-card">
+            <div id="section-public">
+                <h2>Acceso Público</h2>
+                <p>Introduce tu nombre o apodo para identificarte en la red.</p>
+                <div class="input-group">
+                    <input type="text" id="nombre-usuario" placeholder="Nombre y Apellido o Apodo" autocomplete="off">
                 </div>
-                <div id="nombre-archivo">Ningún archivo seleccionado</div>
-                <div id="estado-subida" class="estado-subida"></div>
-                <button type="submit">Enviar</button>
-            </form>
-        </section>
+                <div id="info-registro" class="info-registro" style="display: none;">
+                    <div class="credencial-item">
+                        <strong>Dispositivo detectado:</strong>
+                        <span id="reg-dispositivo">-</span>
+                    </div>
+                    <div class="credencial-item">
+                        <strong>Tu contraseña generada:</strong>
+                        <code id="reg-password">-</code>
+                    </div>
+                    <p class="aviso-seguridad">Guarda estos datos. El dominio <strong>localdrop.home</strong> solo es accesible desde esta red local.</p>
+                </div>
+                <button id="btn-generar-acceso" class="btn-secundario">Generar Acceso</button>
+                <button id="btn-entrar" class="btn-principal" style="display: none;">Entrar a LocalDrop</button>
+                <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+                    ¿Eres el administrador? <a href="#" id="link-show-admin" style="color: var(--primary); font-weight: 600;">Inicia sesión aquí</a>
+                </p>
+            </div>
 
-        <section id="listado" class="seccion-listado">
-            <!-- El contenido del listado de archivos se insertará aquí dinámicamente -->
-        </section>
+            <div id="section-admin" style="display: none;">
+                <h2>Panel de Control</h2>
+                <p>Introduce las credenciales de administrador.</p>
+                <div class="input-group">
+                    <input type="text" id="admin-user" placeholder="Usuario" autocomplete="off" style="margin-bottom: 0.5rem;">
+                    <input type="password" id="admin-pass" placeholder="Contraseña">
+                </div>
+                <button id="btn-login-admin" class="btn-principal">Acceder como Admin</button>
+                <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+                    ¿Usuario normal? <a href="#" id="link-show-public" style="color: var(--primary); font-weight: 600;">Volver al registro público</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- El header se inyecta dinámicamente desde utils.js -->
+    <header class="encabezado-principal"></header>
+
+    <main class="contenido-principal contenedor" style="display: none;">
+        <div class="grid-layout">
+            <aside class="columna-izquierda">
+                <section class="formulario-contenedor">
+                    <form id="formulario-subida">
+                        <textarea id="entrada-texto" placeholder="Escribe un mensaje..."></textarea>
+                        <div class="selector-archivo-contenedor">
+                            <span>Seleccionar Archivo</span>
+                            <input type="file" id="entrada-archivo">
+                        </div>
+                        <div id="nombre-archivo">Ningún archivo seleccionado</div>
+                        <div id="estado-subida" class="estado-subida">
+                            <div class="progreso-contenedor" id="progreso-contenedor">
+                                <div class="progreso-barra" id="progreso-barra"></div>
+                            </div>
+                            <span id="texto-progreso"></span>
+                        </div>
+                        <button type="submit">Enviar</button>
+                    </form>
+                </section>
+            </aside>
+
+            <section id="listado" class="seccion-listado columna-central"></section>
+
+            <aside class="columna-derecha">
+                <section class="widget-lateral">
+                    <h3>Dispositivos en Red</h3>
+                    <div id="lista-dispositivos-mini"></div>
+                </section>
+            </aside>
+        </div>
     </main>
 
-    <section id="acerca-de" class="seccion-informacion">
-        <div class="contenedor">
-            <h2>Acerca de LocalDrop</h2>
-            <p>Una herramienta ligera y eficiente, construida con Vanilla JS y Node.js, para compartir archivos y texto en tu red local sin depender de servicios de terceros.</p>
+    <!-- Modal de Información -->
+    <div class="modal-overlay" id="modal-info">
+        <div class="modal-content">
+            <button class="modal-close" id="cerrar-info">&times;</button>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.5rem; color: var(--primary);">Potencia tu Red Local</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">LocalDrop es la solución definitiva para compartir contenido de forma privada y ultrarrápida entre tus dispositivos.</p>
+            </div>
+            <div class="modal-features">
+                <div class="modal-feature-item">
+                    <h3>🔒 Privacidad Total</h3>
+                    <p>Tus datos nunca salen de tu red. Sin servidores intermedios ni rastreo.</p>
+                </div>
+                <div class="modal-feature-item">
+                    <h3>⚡ Velocidad Local</h3>
+                    <p>Aprovecha el máximo ancho de banda de tu router. Transfiere archivos en segundos.</p>
+                </div>
+                <div class="modal-feature-item">
+                    <h3>📱 Multiplataforma</h3>
+                    <p>Funciona en cualquier dispositivo con un navegador móvil o de escritorio.</p>
+                </div>
+            </div>
         </div>
-    </section>
+    </div>
 
     <footer class="pie-pagina">
         <div class="contenedor">
@@ -50,6 +133,7 @@
         </div>
     </footer>
 
+    <script src="js/utils.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html>
