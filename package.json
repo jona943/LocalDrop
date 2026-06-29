@@ -2,8 +2,9 @@
   "name": "localdrop",
   "version": "1.0.0",
   "description": "LocalDrop es un proyecto personal para crear una herramienta simple y súper ligera que permita compartir texto y archivos en una red local. La meta es construir algo que consuma la menor cantidad de recursos posible, ideal para hardware antiguo o de bajo rendimiento.",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
+    "start": "node src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -13,13 +14,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/jona943/LocalDrop/issues"
   },
   "homepage": "https://github.com/jona943/LocalDrop#readme",
   "dependencies": {
-    "diskusage": "^1.2.0",
     "express": "^5.2.1",
     "multer": "^2.1.1",
     "sse-express": "^1.0.2"

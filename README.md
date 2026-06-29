@@ -39,7 +39,11 @@ Nueva sección de **Galería** donde puedes visualizar todos los archivos subido
     ```
 2.  **Iniciar el servidor:**
     ```bash
-    node js/server.js
+    npm start
+    ```
+    O alternativamente:
+    ```bash
+    node src/server.js
     ```
 
 ---
