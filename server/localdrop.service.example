@@ -1,0 +1,17 @@
+[Unit]
+Description=LocalDrop Server - Local File & Text Sharing Service
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USER
+WorkingDirectory=/path/to/LocalDrop/server
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Environment=STORAGE_PATH=/media/user/ExternalDrive/localdrop_data
+
+[Install]
+WantedBy=multi-user.target
