@@ -14,9 +14,7 @@ import {
   LogOut,
   X,
   AlertTriangle,
-  Download,
-  Eye,
-  Info
+  Download
 } from 'lucide-react';
 import './FileManager.css';
 
@@ -29,12 +27,9 @@ export default function FileManager({ user, onLogout }) {
   const [currentPath, setCurrentPath] = useState('');
   const [parentPath, setParentPath] = useState(null);
   const [items, setItems] = useState([]);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
   
-  // Menú contextual para clic largo / toque largo
   const [selectedItemMenu, setSelectedItemMenu] = useState(null);
-  
-  // Modal de contraseña para borrado definitivo
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -187,7 +182,7 @@ export default function FileManager({ user, onLogout }) {
           )}
         </aside>
 
-        <main className="fm-content" style={{ padding: activeTab === 'chat' ? '0' : '1rem' }}>
+        <main className="fm-content" style={{ padding: activeTab === 'chat' ? '0' : '1rem 1.5rem' }}>
           {activeTab === 'files' || activeTab === 'trash' ? (
             <>
               <div className="fm-toolbar">
@@ -202,17 +197,26 @@ export default function FileManager({ user, onLogout }) {
 
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <div className="view-mode-btns">
-                    <button className={`btn-view ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
+                    <button 
+                      className={`btn-view ${viewMode === 'grid' ? 'active' : ''}`} 
+                      onClick={() => setViewMode('grid')}
+                      title="Vista en Cuadrícula (Grid)"
+                    >
                       <LayoutGrid size={16} />
                     </button>
-                    <button className={`btn-view ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>
+                    <button 
+                      className={`btn-view ${viewMode === 'list' ? 'active' : ''}`} 
+                      onClick={() => setViewMode('list')}
+                      title="Vista en Lista"
+                    >
                       <List size={16} />
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="files-grid">
+              {/* Contenedor dinámico según el modo Grid o Lista */}
+              <div className={viewMode === 'grid' ? 'files-grid' : 'files-list'}>
                 {items.length === 0 ? (
                   <div style={{ color: '#6b7280', fontSize: '0.875rem', gridColumn: '1/-1', textAlign: 'center', marginTop: '2rem' }}>
                     {activeTab === 'trash' ? 'La papelera está vacía.' : 'Esta carpeta está vacía.'}
@@ -254,7 +258,6 @@ export default function FileManager({ user, onLogout }) {
         </main>
       </div>
 
-      {/* Menú Opciones Flotante (Desplegado por clic largo / toque largo) */}
       {selectedItemMenu && (
         <div className="pwd-modal-overlay" onClick={() => setSelectedItemMenu(null)}>
           <div className="pwd-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -303,7 +306,6 @@ export default function FileManager({ user, onLogout }) {
         </div>
       )}
 
-      {/* Modal Confirmación Borrado Definitivo con Contraseña */}
       {deleteModalItem && (
         <div className="pwd-modal-overlay">
           <div className="pwd-modal-content">

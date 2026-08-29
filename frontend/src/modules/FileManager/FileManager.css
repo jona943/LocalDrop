@@ -16,7 +16,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -36,20 +36,19 @@
   gap: 0.5rem;
 }
 
-/* Grid Layout */
+/* Grid Layout de Ancho Completo en Pantallas Grandes */
 .fm-main {
   display: flex;
   flex-direction: column;
   flex: 1;
-  max-width: 1400px;
   width: 100%;
-  margin: 0 auto;
+  max-width: 100%;
 }
 
 @media (min-width: 768px) {
   .fm-main {
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: 280px 1fr;
   }
 }
 
@@ -67,7 +66,7 @@
   .fm-sidebar {
     border-bottom: none;
     border-right: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 1.25rem;
+    padding: 1.5rem;
     gap: 1.5rem;
   }
 }
@@ -150,19 +149,20 @@
   gap: 0.4rem;
 }
 
-/* Content Area */
+/* Area de Contenido Expandida al 100% */
 .fm-content {
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   flex: 1;
+  width: 100%;
   min-height: calc(100vh - 180px);
 }
 
 @media (min-width: 768px) {
   .fm-content {
-    padding: 1.5rem;
+    padding: 1.5rem 2rem;
     min-height: calc(100vh - 65px);
   }
 }
@@ -210,36 +210,75 @@
 .btn-view {
   background: transparent;
   color: #6b7280;
-  padding: 0.3rem 0.5rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
 }
 
 .btn-view.active {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(79, 70, 229, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.4);
 }
 
-/* Files Grid & List */
+/* Vista Grid Adaptativa al Ancho Completo */
 .files-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.85rem;
   flex: 1;
   align-content: start;
+  width: 100%;
 }
 
 @media (min-width: 640px) {
   .files-grid {
-    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.15rem;
   }
+}
+
+@media (min-width: 1200px) {
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Vista Lista (Fila a Fila) */
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  width: 100%;
+}
+
+.file-card-list {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.file-card-list:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(17, 24, 39, 0.9);
 }
 
 .file-card-grid {
   background: rgba(17, 24, 39, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 0.75rem 0.5rem;
+  padding: 0.85rem 0.6rem;
   display: flex;
   flex-direction: column;
   align-items: center;

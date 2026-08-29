@@ -9,20 +9,20 @@ import {
   File 
 } from 'lucide-react';
 
-export default function FileCard({ item, onOpenFolder, onSelectContextMenu }) {
+export default function FileCard({ item, viewMode, onOpenFolder, onSelectContextMenu }) {
   const timerRef = useRef(null);
 
-  const getFileIcon = () => {
-    if (item.isDirectory) return <Folder size={34} style={{ color: '#818cf8' }} />;
+  const getFileIcon = (iconSize = 32) => {
+    if (item.isDirectory) return <Folder size={iconSize} style={{ color: '#818cf8' }} />;
     const ext = item.name.split('.').pop().toLowerCase();
     
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return <Image size={32} style={{ color: '#34d399' }} />;
-    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return <Film size={32} style={{ color: '#f43f5e' }} />;
-    if (['mp3', 'wav', 'flac'].includes(ext)) return <Music size={32} style={{ color: '#a855f7' }} />;
-    if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) return <Archive size={32} style={{ color: '#eab308' }} />;
-    if (['txt', 'pdf', 'doc', 'docx', 'md'].includes(ext)) return <FileText size={32} style={{ color: '#38bdf8' }} />;
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return <Image size={iconSize} style={{ color: '#34d399' }} />;
+    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return <Film size={iconSize} style={{ color: '#f43f5e' }} />;
+    if (['mp3', 'wav', 'flac'].includes(ext)) return <Music size={iconSize} style={{ color: '#a855f7' }} />;
+    if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) return <Archive size={iconSize} style={{ color: '#eab308' }} />;
+    if (['txt', 'pdf', 'doc', 'docx', 'md'].includes(ext)) return <FileText size={iconSize} style={{ color: '#38bdf8' }} />;
     
-    return <File size={32} style={{ color: '#9ca3af' }} />;
+    return <File size={iconSize} style={{ color: '#9ca3af' }} />;
   };
 
   const formatBytes = (bytes) => {
@@ -32,11 +32,10 @@ export default function FileCard({ item, onOpenFolder, onSelectContextMenu }) {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  // Manejadores de toque largo (móvil) y clic secundario / pulsación prolongada (desktop)
   const handleTouchStart = (e) => {
     timerRef.current = setTimeout(() => {
       onSelectContextMenu(item, e);
-    }, 600); // 600ms para toque largo
+    }, 600);
   };
 
   const handleTouchEnd = () => {
@@ -52,10 +51,33 @@ export default function FileCard({ item, onOpenFolder, onSelectContextMenu }) {
     if (item.isDirectory) {
       onOpenFolder(item.path);
     } else {
-      // En escritorio abrir menú con clic izquierdo directo si se desea
       onSelectContextMenu(item, e);
     }
   };
+
+  if (viewMode === 'list') {
+    return (
+      <div 
+        className="file-card-list"
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchEnd}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+          {getFileIcon(22)}
+          <span className="file-card-name" style={{ fontSize: '0.85rem' }} title={item.name}>{item.name}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
+          {!item.isDirectory && <span className="file-card-size">{formatBytes(item.size)}</span>}
+          <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+            {new Date(item.updatedAt || Date.now()).toLocaleDateString()}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -66,7 +88,7 @@ export default function FileCard({ item, onOpenFolder, onSelectContextMenu }) {
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchEnd}
     >
-      <div className="file-icon-box">{getFileIcon()}</div>
+      <div className="file-icon-box">{getFileIcon(34)}</div>
       <span className="file-card-name" title={item.name}>{item.name}</span>
       {!item.isDirectory && <span className="file-card-size">{formatBytes(item.size)}</span>}
     </div>
