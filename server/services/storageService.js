@@ -39,50 +39,37 @@ export const listDisks = async () => {
         }
     } else {
         try {
-            // Usar lsblk en Linux para encontrar puntos de montaje y particiones reales
-            const { stdout } = await execAsync('lsblk -J -b -o NAME,MOUNTPOINT,SIZE,FSAVAIL,FSUSED,TYPE,LABEL');
-            const parsed = JSON.parse(stdout);
+            // Analizar la salida del comando df para detectar discos montados en Linux/Armbian
+            const { stdout } = await execAsync('df -B1');
+            const lines = stdout.trim().split('\n').slice(1);
+            for (const line of lines) {
+                const parts = line.replace(/\s+/g, ' ').trim().split(' ');
+                if (parts.length >= 6) {
+                    const mountPoint = parts[5];
+                    // Filtrar sistemas de archivos virtuales o temporales
+                    if (
+                        mountPoint && 
+                        !mountPoint.startsWith('/boot') && 
+                        !mountPoint.startsWith('/proc') && 
+                        !mountPoint.startsWith('/sys') && 
+                        !mountPoint.startsWith('/dev') && 
+                        !mountPoint.startsWith('/run') &&
+                        !mountPoint.includes('zram')
+                    ) {
+                        const total = parseInt(parts[1], 10) || 0;
+                        const used = parseInt(parts[2], 10) || 0;
+                        const available = parseInt(parts[3], 10) || 0;
+                        
+                        if (total > 0) {
+                            let name = 'Disco Local';
+                            if (mountPoint === '/') name = 'Sistema Principal (eMMC)';
+                            else if (mountPoint.includes('/var/log')) name = 'Log Storage';
+                            else name = `Almacenamiento (${path.basename(mountPoint) || mountPoint})`;
 
-            const findMounted = (nodes) => {
-                for (const node of nodes) {
-                    if (node.mountpoint && !node.mountpoint.startsWith('/boot') && !node.mountpoint.startsWith('/var/log')) {
-                        const total = parseInt(node.size, 10) || 0;
-                        const used = parseInt(node.fsused, 10) || 0;
-                        const available = parseInt(node.fsavail, 10) || (total - used);
-
-                        disks.push({
-                            id: node.name,
-                            name: node.label || (node.mountpoint === '/' ? 'Sistema Principal' : node.name),
-                            mountPoint: node.mountpoint,
-                            total,
-                            used,
-                            available,
-                            type: node.type
-                        });
-                    }
-                    if (node.children) findMounted(node.children);
-                }
-            };
-
-            if (parsed.blockdevices) findMounted(parsed.blockdevices);
-        } catch (err) {
-            console.warn('Error al ejecutar lsblk, usando df fallback:', err.message);
-            // Fallback con df
-            try {
-                const { stdout } = await execAsync('df -B1 -x tmpfs -x devtmpfs -x squashfs');
-                const lines = stdout.trim().split('\n').slice(1);
-                for (const line of lines) {
-                    const parts = line.replace(/\s+/g, ' ').trim().split(' ');
-                    if (parts.length >= 6) {
-                        const mount = parts[5];
-                        if (mount && !mount.startsWith('/boot')) {
-                            const total = parseInt(parts[1], 10) || 0;
-                            const used = parseInt(parts[2], 10) || 0;
-                            const available = parseInt(parts[3], 10) || 0;
                             disks.push({
                                 id: parts[0],
-                                name: mount === '/' ? 'Sistema Principal' : path.basename(mount),
-                                mountPoint: mount,
+                                name,
+                                mountPoint,
                                 total,
                                 used,
                                 available
@@ -90,10 +77,22 @@ export const listDisks = async () => {
                         }
                     }
                 }
-            } catch (e) {
-                console.error('Fallo total al detectar discos:', e.message);
             }
+        } catch (err) {
+            console.error('Error al detectar discos con df:', err.message);
         }
+    }
+
+    // Fallback si no detecta nada
+    if (disks.length === 0) {
+        disks.push({
+            id: 'root',
+            name: 'Almacenamiento Servidor',
+            mountPoint: process.env.STORAGE_PATH || '/',
+            total: 500 * 1024 * 1024 * 1024,
+            used: 10 * 1024 * 1024 * 1024,
+            available: 490 * 1024 * 1024 * 1024
+        });
     }
 
     return disks;
@@ -103,18 +102,17 @@ export const listDisks = async () => {
  * Explora el contenido de un directorio en el disco sin modificarlo
  */
 export const exploreDirectory = async (dirPath) => {
-    const resolvedPath = path.resolve(dirPath);
+    const resolvedPath = path.resolve(dirPath || '/');
     
     if (!fs.existsSync(resolvedPath)) {
-        throw new Error('La ruta especificada no existe en el servidor.');
+        throw new Error(`La ruta ${resolvedPath} no existe.`);
     }
 
     const items = await fs.promises.readdir(resolvedPath, { withFileTypes: true });
     const result = [];
 
     for (const item of items) {
-        // Ignorar carpeta oculta de papelera .trash
-        if (item.name === '.trash') continue;
+        if (item.name === '.trash' || item.name.startsWith('.')) continue;
 
         const fullPath = path.join(resolvedPath, item.name);
         try {
@@ -127,7 +125,7 @@ export const exploreDirectory = async (dirPath) => {
                 updatedAt: stats.mtime
             });
         } catch (e) {
-            // Archivos sin permiso de lectura se omiten de forma segura
+            // Ignorar archivos sin permiso de lectura
         }
     }
 
@@ -139,7 +137,7 @@ export const exploreDirectory = async (dirPath) => {
 };
 
 /**
- * Mueve un archivo a la carpeta .trash/ oculta de la unidad correspondiente
+ * Mueve un archivo a la carpeta .trash/ oculta
  */
 export const moveToTrash = async (filePath) => {
     const resolved = path.resolve(filePath);
@@ -158,48 +156,22 @@ export const moveToTrash = async (filePath) => {
     const trashPath = path.join(trashDir, `${Date.now()}_${fileName}`);
 
     await fs.promises.rename(resolved, trashPath);
-
     return { success: true, trashPath };
 };
 
 /**
- * Purga de la papelera archivos mayores a 30 días
- */
-export const autoCleanTrash = async (baseDir) => {
-    const trashDir = path.join(baseDir, '.trash');
-    if (!fs.existsSync(trashDir)) return;
-
-    const files = await fs.promises.readdir(trashDir);
-    const now = Date.now();
-    const maxAgeMs = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-
-    for (const file of files) {
-        const filePath = path.join(trashDir, file);
-        try {
-            const stats = await fs.promises.stat(filePath);
-            if (now - stats.mtimeMs > maxAgeMs) {
-                await fs.promises.rm(filePath, { recursive: true, force: true });
-                console.log(`🗑️ Papelera: Archivo ${file} purgado automáticamente (+30 días).`);
-            }
-        } catch (e) {
-            console.error('Error al purgar archivo en papelera:', e.message);
-        }
-    }
-};
-
-/**
- * Borrado definitivo inmediato mediante validación de contraseña
+ * Borrado definitivo inmediato con contraseña
  */
 export const deletePermanently = async (filePath, inputPassword) => {
     const adminPass = process.env.ADMIN_PASS || 'LocalDROP2026@';
     
     if (inputPassword !== adminPass) {
-        throw new Error('Contraseña incorrecta. Borrado definitivo cancelado por seguridad.');
+        throw new Error('Contraseña incorrecta. Borrado definitivo cancelado.');
     }
 
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved)) {
-        throw new Error('El archivo a eliminar no existe.');
+        throw new Error('El archivo no existe.');
     }
 
     await fs.promises.rm(resolved, { recursive: true, force: true });

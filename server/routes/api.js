@@ -3,6 +3,7 @@ import multer from 'multer';
 import sseExpress from 'sse-express';
 import { uploadsDir } from '../utils/paths.js';
 import * as apiController from '../controllers/apiController.js';
+import * as storageController from '../controllers/storageController.js';
 
 const router = express.Router();
 
@@ -15,6 +16,12 @@ const upload = multer({
     storage: storage, 
     limits: { fileSize: 10 * 1024 * 1024 * 1024 } // Límite de 10GB
 });
+
+// --- Rutas del Gestor de Almacenamiento & Papelera (Fase 1) ---
+router.get('/disks', storageController.getDisks);
+router.get('/explore', storageController.explorePath);
+router.post('/trash', storageController.moveToTrash);
+router.post('/delete-permanent', storageController.deletePermanently);
 
 // --- Rutas de Autenticación y SSE ---
 router.post('/login', apiController.login);
@@ -32,15 +39,7 @@ router.delete('/item/:id', apiController.deleteItem);
 router.delete('/items', apiController.clearItems);
 
 // --- Rutas de Utilidades y Disco ---
-router.get('/api/files', apiController.getFiles);
-router.get('/api/storage', apiController.getStorageInfo);
+router.get('/files', apiController.getFiles);
+router.get('/storage', apiController.getStorageInfo);
 
 export default router;
-
-// --- Rutas del Gestor de Almacenamiento & Papelera (Fase 1) ---
-import * as storageController from '../controllers/storageController.js';
-
-router.get('/api/disks', storageController.getDisks);
-router.get('/api/explore', storageController.explorePath);
-router.post('/api/trash', storageController.moveToTrash);
-router.post('/api/delete-permanent', storageController.deletePermanently);

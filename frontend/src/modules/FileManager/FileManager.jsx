@@ -20,7 +20,7 @@ import './FileManager.css';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function FileManager({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('files'); // 'files', 'trash', 'chat', 'settings'
+  const [activeTab, setActiveTab] = useState('files');
   const [disks, setDisks] = useState([]);
   const [selectedDisk, setSelectedDisk] = useState(null);
   const [currentPath, setCurrentPath] = useState('');
@@ -28,7 +28,6 @@ export default function FileManager({ user, onLogout }) {
   const [items, setItems] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
   
-  // Modal de contraseña para borrado definitivo
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -39,10 +38,10 @@ export default function FileManager({ user, onLogout }) {
 
   const fetchDisks = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/disks`);
+      const res = await fetch(`${API_BASE}/disks`);
       const data = await res.json();
       setDisks(data);
-      if (data.length > 0 && !selectedDisk) {
+      if (data.length > 0) {
         setSelectedDisk(data[0]);
         explorePath(data[0].mountPoint);
       }
@@ -53,11 +52,11 @@ export default function FileManager({ user, onLogout }) {
 
   const explorePath = async (targetPath) => {
     try {
-      const res = await fetch(`${API_BASE}/api/explore?path=${encodeURIComponent(targetPath)}`);
+      const res = await fetch(`${API_BASE}/explore?path=${encodeURIComponent(targetPath)}`);
       const data = await res.json();
       setCurrentPath(data.currentPath);
       setParentPath(data.parentPath);
-      setItems(data.items);
+      setItems(data.items || []);
     } catch (err) {
       console.error('Error al explorar directorio:', err);
     }
@@ -70,7 +69,7 @@ export default function FileManager({ user, onLogout }) {
 
   const handleMoveToTrash = async (filePath) => {
     try {
-      await fetch(`${API_BASE}/api/trash`, {
+      await fetch(`${API_BASE}/trash`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath })
@@ -85,7 +84,7 @@ export default function FileManager({ user, onLogout }) {
     e.preventDefault();
     setDeleteError('');
     try {
-      const res = await fetch(`${API_BASE}/api/delete-permanent`, {
+      const res = await fetch(`${API_BASE}/delete-permanent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: deleteModalItem.path, password: confirmPassword })
@@ -112,7 +111,6 @@ export default function FileManager({ user, onLogout }) {
 
   return (
     <div className="filemanager-layout">
-      {/* Header tipo Google Drive */}
       <header className="fm-header">
         <div className="fm-brand">
           <img src="/localDrop-icon.png" alt="LocalDrop" style={{ width: '26px', height: '26px' }} />
@@ -136,7 +134,6 @@ export default function FileManager({ user, onLogout }) {
       </header>
 
       <div className="fm-main">
-        {/* Sidebar Integrado */}
         <aside className="fm-sidebar">
           <nav className="fm-nav-section">
             <button 
@@ -182,11 +179,9 @@ export default function FileManager({ user, onLogout }) {
           )}
         </aside>
 
-        {/* Content Area */}
         <main className="fm-content" style={{ padding: activeTab === 'chat' ? '0' : '1rem' }}>
           {activeTab === 'files' || activeTab === 'trash' ? (
             <>
-              {/* Toolbar */}
               <div className="fm-toolbar">
                 <div className="breadcrumbs">
                   {parentPath && (
@@ -209,7 +204,6 @@ export default function FileManager({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Files Grid */}
               <div className="files-grid">
                 {items.length === 0 ? (
                   <div style={{ color: '#6b7280', fontSize: '0.875rem', gridColumn: '1/-1', textAlign: 'center', marginTop: '2rem' }}>
@@ -231,7 +225,6 @@ export default function FileManager({ user, onLogout }) {
           ) : activeTab === 'chat' ? (
             <Chat user={user} onLogout={onLogout} isEmbedded={true} />
           ) : (
-            /* Ajustes Tab */
             <div style={{ padding: '1.5rem', maxWidth: '600px' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Ajustes del Servidor</h2>
               <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
@@ -253,7 +246,6 @@ export default function FileManager({ user, onLogout }) {
         </main>
       </div>
 
-      {/* Modal Confirmación Borrado Definitivo con Contraseña */}
       {deleteModalItem && (
         <div className="pwd-modal-overlay">
           <div className="pwd-modal-content">
