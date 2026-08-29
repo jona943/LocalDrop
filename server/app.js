@@ -29,7 +29,7 @@ app.use('/', apiRouter);
 const frontendDist = path.join(serverDir, '../frontend/dist');
 app.use(express.static(frontendDist));
 
-app.get('*', (req, res) => {
+app.use((req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'), (err) => {
         if (err) {
             res.status(404).send('LocalDrop Backend running. Frontend dist not built yet.');
