@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Landing from './modules/Landing/Landing';
 import Auth from './modules/Auth/Auth';
 import Chat from './modules/Chat/Chat';
+import FileManager from './modules/FileManager/FileManager';
 import './styles/global.css';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos en milisegundos
 
 export default function App() {
-  const [currentModule, setCurrentModule] = useState('landing');
+  const [currentModule, setCurrentModule] = useState('landing'); // 'landing', 'login', 'drive', 'chat'
   const [user, setUser] = useState(null);
   const timerRef = useRef(null);
 
@@ -20,9 +21,8 @@ export default function App() {
       const elapsed = Date.now() - parseInt(loginTime, 10);
       if (elapsed < INACTIVITY_TIMEOUT) {
         setUser(JSON.parse(savedUser));
-        setCurrentModule('chat');
+        setCurrentModule('drive');
       } else {
-        // Sesión expirada por inactividad previa
         clearSession();
       }
     }
@@ -33,7 +33,6 @@ export default function App() {
     if (timerRef.current) clearTimeout(timerRef.current);
     
     if (user || localStorage.getItem('localdrop_user')) {
-      // Actualizar timestamp de última actividad
       localStorage.setItem('localdrop_login_time', Date.now().toString());
 
       timerRef.current = setTimeout(() => {
@@ -45,7 +44,7 @@ export default function App() {
 
   // Escuchar eventos de actividad del usuario (mouse, teclado, touch)
   useEffect(() => {
-    if (user && currentModule === 'chat') {
+    if (user && (currentModule === 'drive' || currentModule === 'chat')) {
       const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
       
       const handleUserActivity = () => {
@@ -53,7 +52,7 @@ export default function App() {
       };
 
       events.forEach((event) => window.addEventListener(event, handleUserActivity));
-      resetInactivityTimer(); // Iniciar temporizador
+      resetInactivityTimer();
 
       return () => {
         events.forEach((event) => window.removeEventListener(event, handleUserActivity));
@@ -74,7 +73,7 @@ export default function App() {
     localStorage.setItem('localdrop_user', JSON.stringify(userData));
     localStorage.setItem('localdrop_login_time', now);
     setUser(userData);
-    setCurrentModule('chat');
+    setCurrentModule('drive');
   };
 
   const handleLogout = () => {
@@ -95,10 +94,19 @@ export default function App() {
         />
       )}
 
+      {currentModule === 'drive' && (
+        <FileManager 
+          user={user} 
+          onLogout={handleLogout}
+          onNavigateToChat={() => setCurrentModule('chat')}
+        />
+      )}
+
       {currentModule === 'chat' && (
         <Chat 
           user={user} 
           onLogout={handleLogout} 
+          onNavigateToDrive={() => setCurrentModule('drive')}
         />
       )}
     </div>
