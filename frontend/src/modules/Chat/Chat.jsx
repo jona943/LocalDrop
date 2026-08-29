@@ -106,7 +106,7 @@ export default function Chat({ user, onLogout }) {
           </div>
           <div>
             <h4>Dispositivos Activos</h4>
-            <ul style={{ list-style: 'none', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            <ul style={{ listStyle: 'none', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
               <li>🟢 Servidor LocalDrop</li>
               <li>🔵 Dispositivo Conectado</li>
             </ul>
