@@ -36,3 +36,11 @@ router.get('/api/files', apiController.getFiles);
 router.get('/api/storage', apiController.getStorageInfo);
 
 export default router;
+
+// --- Rutas del Gestor de Almacenamiento & Papelera (Fase 1) ---
+import * as storageController from '../controllers/storageController.js';
+
+router.get('/api/disks', storageController.getDisks);
+router.get('/api/explore', storageController.explorePath);
+router.post('/api/trash', storageController.moveToTrash);
+router.post('/api/delete-permanent', storageController.deletePermanently);
