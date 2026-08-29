@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import ChatHeader from './components/ChatHeader';
+import ChatSidebar from './components/ChatSidebar';
+import ChatFeed from './components/ChatFeed';
+import ChatInput from './components/ChatInput';
 import './Chat.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -16,10 +20,14 @@ export default function Chat({ user, onLogout }) {
     // SSE para actualización en tiempo real
     const eventSource = new EventSource(`${API_BASE}/events`);
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'item_added' || data.type === 'item_deleted') {
-        fetchItems();
-        fetchDiskInfo();
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'item_added' || data.type === 'item_deleted') {
+          fetchItems();
+          fetchDiskInfo();
+        }
+      } catch (err) {
+        console.error('Error al procesar SSE:', err);
       }
     };
 
@@ -47,7 +55,7 @@ export default function Chat({ user, onLogout }) {
   };
 
   const handleSend = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!inputText && !selectedFile) return;
 
     const formData = new FormData();
@@ -82,79 +90,36 @@ export default function Chat({ user, onLogout }) {
 
   return (
     <div className="chat-layout">
-      <header className="chat-header">
-        <div className="chat-brand">LocalDrop<span>.home</span></div>
-        <div>
-          <span>Hola, <strong>{user ? user.username : 'Invitado'}</strong></span>
-          <button onClick={onLogout} className="btn-secondary" style={{ marginLeft: '1rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-            Salir
-          </button>
-        </div>
-      </header>
+      <ChatHeader 
+        user={user} 
+        onLogout={onLogout} 
+        storageInfo={storageInfo}
+        formatSize={formatSize}
+        usedPercentage={usedPercentage}
+      />
 
       <div className="chat-main">
-        <aside className="chat-sidebar">
-          <h3>Menú</h3>
-          <div className="storage-widget">
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Almacenamiento Ocupado</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '0.2rem' }}>
-              {formatSize(storageInfo.used)} / {formatSize(storageInfo.total)}
-            </div>
-            <div className="storage-bar-bg">
-              <div className="storage-bar-fill" style={{ width: `${usedPercentage}%` }}></div>
-            </div>
-          </div>
-          <div>
-            <h4>Dispositivos Activos</h4>
-            <ul style={{ listStyle: 'none', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              <li>🟢 Servidor LocalDrop</li>
-              <li>🔵 Dispositivo Conectado</li>
-            </ul>
-          </div>
-        </aside>
+        <ChatSidebar 
+          storageInfo={storageInfo} 
+          formatSize={formatSize} 
+          usedPercentage={usedPercentage} 
+        />
 
-        <div className="chat-feed-container">
-          <div className="chat-feed">
-            {items.map((item) => (
-              <div key={item.id} className="chat-item">
-                <div className="chat-item-header">
-                  <strong>{item.userName || 'Anónimo'}</strong>
-                  <span>{new Date(item.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                {item.text && <p>{item.text}</p>}
-                {item.file && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <a 
-                      href={`${API_BASE}/uploads/${item.file.filename}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}
-                    >
-                      📎 {item.file.originalname} ({formatSize(item.file.size)})
-                    </a>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="chat-content-area">
+          <ChatFeed 
+            items={items} 
+            API_BASE={API_BASE} 
+            formatSize={formatSize} 
+            currentUser={user} 
+          />
 
-          <form onSubmit={handleSend} className="chat-input-box">
-            <textarea 
-              placeholder="Escribe un mensaje o nota..." 
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-            />
-            <input 
-              type="file" 
-              id="file-upload" 
-              style={{ display: 'none' }}
-              onChange={(e) => setSelectedFile(e.target.files[0])}
-            />
-            <label htmlFor="file-upload" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              📎 {selectedFile ? selectedFile.name.substring(0, 12) + '...' : 'Adjuntar'}
-            </label>
-            <button type="submit" className="btn-primary">Enviar</button>
-          </form>
+          <ChatInput 
+            inputText={inputText} 
+            setInputText={setInputText} 
+            selectedFile={selectedFile} 
+            setSelectedFile={setSelectedFile} 
+            handleSend={handleSend} 
+          />
         </div>
       </div>
     </div>
