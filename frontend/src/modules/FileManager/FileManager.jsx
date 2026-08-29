@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import DiskSelector from './components/DiskSelector';
 import FileCard from './components/FileCard';
+import Chat from '../Chat/Chat';
 import { 
   Folder, 
   Trash2, 
   Settings, 
   MessageSquare, 
-  Upload, 
   LayoutGrid, 
   List, 
   ArrowLeft, 
@@ -19,8 +19,8 @@ import './FileManager.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export default function FileManager({ user, onLogout, onNavigateToChat }) {
-  const [activeTab, setActiveTab] = useState('files'); // 'files', 'trash'
+export default function FileManager({ user, onLogout }) {
+  const [activeTab, setActiveTab] = useState('files'); // 'files', 'trash', 'chat', 'settings'
   const [disks, setDisks] = useState([]);
   const [selectedDisk, setSelectedDisk] = useState(null);
   const [currentPath, setCurrentPath] = useState('');
@@ -120,19 +120,23 @@ export default function FileManager({ user, onLogout, onNavigateToChat }) {
         </div>
 
         <div className="fm-header-actions">
-          <button className="btn-copy" onClick={onNavigateToChat} title="Ir a Notas y Chat">
-            <MessageSquare size={16} />
-            <span>Notas & Chat</span>
+          <button 
+            className={`btn-copy ${activeTab === 'settings' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('settings')} 
+            title="Ajustes del Servidor"
+          >
+            <Settings size={16} />
+            <span className="desktop-only">Ajustes</span>
           </button>
           <button className="btn-logout" onClick={onLogout}>
             <LogOut size={15} />
-            <span>Salir</span>
+            <span className="desktop-only">Salir</span>
           </button>
         </div>
       </header>
 
       <div className="fm-main">
-        {/* Sidebar */}
+        {/* Sidebar Integrado */}
         <aside className="fm-sidebar">
           <nav className="fm-nav-section">
             <button 
@@ -140,7 +144,14 @@ export default function FileManager({ user, onLogout, onNavigateToChat }) {
               onClick={() => setActiveTab('files')}
             >
               <Folder size={18} />
-              <span>Mis Archivos</span>
+              <span>Archivos</span>
+            </button>
+            <button 
+              className={`fm-nav-item ${activeTab === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveTab('chat')}
+            >
+              <MessageSquare size={18} />
+              <span>Notas & Chat</span>
             </button>
             <button 
               className={`fm-nav-item ${activeTab === 'trash' ? 'active' : ''}`}
@@ -150,55 +161,95 @@ export default function FileManager({ user, onLogout, onNavigateToChat }) {
               }}
             >
               <Trash2 size={18} />
-              <span>Papelera (30 días)</span>
+              <span>Papelera</span>
+            </button>
+            <button 
+              className={`fm-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              <Settings size={18} />
+              <span>Ajustes</span>
             </button>
           </nav>
 
-          <DiskSelector 
-            disks={disks} 
-            selectedDisk={selectedDisk} 
-            onSelectDisk={handleSelectDisk}
-            formatSize={formatSize}
-          />
+          {activeTab !== 'chat' && activeTab !== 'settings' && (
+            <DiskSelector 
+              disks={disks} 
+              selectedDisk={selectedDisk} 
+              onSelectDisk={handleSelectDisk}
+              formatSize={formatSize}
+            />
+          )}
         </aside>
 
         {/* Content Area */}
-        <main className="fm-content">
-          {/* Toolbar */}
-          <div className="fm-toolbar">
-            <div className="breadcrumbs">
-              {parentPath && (
-                <button className="btn-copy" onClick={() => explorePath(parentPath)} title="Subir nivel">
-                  <ArrowLeft size={16} />
-                </button>
-              )}
-              <span className="crumb-item">{currentPath}</span>
-            </div>
+        <main className="fm-content" style={{ padding: activeTab === 'chat' ? '0' : '1rem' }}>
+          {activeTab === 'files' || activeTab === 'trash' ? (
+            <>
+              {/* Toolbar */}
+              <div className="fm-toolbar">
+                <div className="breadcrumbs">
+                  {parentPath && (
+                    <button className="btn-copy" onClick={() => explorePath(parentPath)} title="Subir nivel">
+                      <ArrowLeft size={16} />
+                    </button>
+                  )}
+                  <span className="crumb-item">{currentPath}</span>
+                </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <div className="view-mode-btns">
-                <button className={`btn-view ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
-                  <LayoutGrid size={16} />
-                </button>
-                <button className={`btn-view ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>
-                  <List size={16} />
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div className="view-mode-btns">
+                    <button className={`btn-view ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
+                      <LayoutGrid size={16} />
+                    </button>
+                    <button className={`btn-view ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>
+                      <List size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Files Grid */}
+              <div className="files-grid">
+                {items.length === 0 ? (
+                  <div style={{ color: '#6b7280', fontSize: '0.875rem', gridColumn: '1/-1', textAlign: 'center', marginTop: '2rem' }}>
+                    {activeTab === 'trash' ? 'La papelera está vacía.' : 'Esta carpeta está vacía.'}
+                  </div>
+                ) : (
+                  items.map((item) => (
+                    <FileCard 
+                      key={item.path} 
+                      item={item} 
+                      viewMode={viewMode}
+                      onOpenFolder={(path) => explorePath(path)}
+                      onMoveToTrash={activeTab === 'files' ? handleMoveToTrash : null}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          ) : activeTab === 'chat' ? (
+            <Chat user={user} onLogout={onLogout} isEmbedded={true} />
+          ) : (
+            /* Ajustes Tab */
+            <div style={{ padding: '1.5rem', maxWidth: '600px' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Ajustes del Servidor</h2>
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                Configuración del entorno LocalDrop en el servidor local.
+              </p>
+
+              <div className="sidebar-card" style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.5rem' }}>Información de Sesión</h3>
+                <div style={{ fontSize: '0.85rem', color: '#d1d5db' }}>Usuario: <strong>{user ? user.username : 'admin'}</strong></div>
+                <div style={{ fontSize: '0.85rem', color: '#d1d5db', marginTop: '0.25rem' }}>Inactividad: <strong>Cierre automático en 5 minutos</strong></div>
+              </div>
+
+              <div className="sidebar-card">
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.5rem' }}>Retención de Papelera</h3>
+                <div style={{ fontSize: '0.85rem', color: '#d1d5db' }}>Purga automática: <strong>Activa (30 días)</strong></div>
               </div>
             </div>
-          </div>
-
-          {/* Files Grid */}
-          <div className="files-grid">
-            {items.map((item) => (
-              <FileCard 
-                key={item.path} 
-                item={item} 
-                viewMode={viewMode}
-                onOpenFolder={(path) => explorePath(path)}
-                onMoveToTrash={activeTab === 'files' ? handleMoveToTrash : null}
-              />
-            ))}
-          </div>
+          )}
         </main>
       </div>
 

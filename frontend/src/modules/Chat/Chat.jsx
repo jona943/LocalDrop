@@ -7,7 +7,7 @@ import './Chat.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export default function Chat({ user, onLogout }) {
+export default function Chat({ user, onLogout, isEmbedded = false }) {
   const [items, setItems] = useState([]);
   const [inputText, setInputText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -89,23 +89,27 @@ export default function Chat({ user, onLogout }) {
     : 0;
 
   return (
-    <div className="chat-layout">
-      <ChatHeader 
-        user={user} 
-        onLogout={onLogout} 
-        storageInfo={storageInfo}
-        formatSize={formatSize}
-        usedPercentage={usedPercentage}
-      />
-
-      <div className="chat-main">
-        <ChatSidebar 
-          storageInfo={storageInfo} 
-          formatSize={formatSize} 
-          usedPercentage={usedPercentage} 
+    <div className="chat-layout" style={{ minHeight: isEmbedded ? 'auto' : '100vh', flex: 1 }}>
+      {!isEmbedded && (
+        <ChatHeader 
+          user={user} 
+          onLogout={onLogout} 
+          storageInfo={storageInfo}
+          formatSize={formatSize}
+          usedPercentage={usedPercentage}
         />
+      )}
 
-        <div className="chat-content-area">
+      <div className="chat-main" style={{ height: isEmbedded ? '100%' : 'auto' }}>
+        {!isEmbedded && (
+          <ChatSidebar 
+            storageInfo={storageInfo} 
+            formatSize={formatSize} 
+            usedPercentage={usedPercentage} 
+          />
+        )}
+
+        <div className="chat-content-area" style={{ height: isEmbedded ? 'calc(100vh - 70px)' : 'calc(100vh - 140px)' }}>
           <ChatFeed 
             items={items} 
             API_BASE={API_BASE} 
