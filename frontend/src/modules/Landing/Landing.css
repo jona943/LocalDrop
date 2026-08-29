@@ -1,0 +1,63 @@
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.landing-title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.landing-title span {
+  color: var(--primary);
+}
+
+.landing-subtitle {
+  color: var(--text-muted);
+  max-width: 500px;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.landing-features {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  color: var(--accent);
+}
+
+.landing-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: #334155;
+}
