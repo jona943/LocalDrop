@@ -1,67 +1,141 @@
 import React from 'react';
-import { ShieldCheck, Zap, HardDrive, Lock, ArrowRight, Server } from 'lucide-react';
+import { 
+  Server, 
+  Lock, 
+  ArrowRight, 
+  Zap, 
+  ShieldCheck, 
+  Smartphone, 
+  Monitor, 
+  Tablet,
+  Activity,
+  Wifi
+} from 'lucide-react';
 import './Landing.css';
 
 export default function Landing({ onNavigate }) {
   return (
-    <div className="landing-wrapper">
-      <header className="landing-nav">
-        <div className="landing-logo">
-          <span className="landing-logo-icon"><Server size={22} /></span>
-          LocalDrop<span>.home</span>
+    <div className="landing-container">
+      {/* 1. Header / Navbar Sticky con Blur */}
+      <header className="landing-header">
+        <div className="landing-brand">
+          <div className="brand-icon-box">
+            <Server size={18} />
+          </div>
+          <span>LocalDrop<span className="brand-dot">.home</span></span>
         </div>
-        <div className="badge-status">
-          <span className="badge-dot"></span>
+        <div className="status-badge">
+          <span className="pulse-dot"></span>
           Servidor Activo
         </div>
       </header>
 
-      <main className="landing-hero">
-        <div className="hero-tag">
-          <Lock size={14} />
+      {/* 2. Hero Section */}
+      <main className="hero-section">
+        <div className="auth-badge">
+          <Lock size={13} />
           Acceso Privado & Autenticado
         </div>
         
-        <h1 className="landing-title">
-          Tu almacenamiento local, rápido y seguro.
+        <h1 className="hero-title">
+          Tu almacenamiento local, <br />
+          <span className="text-gradient">ultrarrápido y privado.</span>
         </h1>
         
-        <p className="landing-subtitle">
-          Plataforma privada para la transferencia instantánea de archivos y notas dentro de tu red local sin depender de la nube.
+        <p className="hero-subtitle">
+          Plataforma de alta velocidad para la transferencia instantánea de archivos y notas en tu red local. Sin intermediarios ni dependencias en la nube.
         </p>
 
-        <button className="btn-primary-lg" onClick={() => onNavigate('login')}>
-          Iniciar Sesión
+        <button 
+          className="cta-button" 
+          onClick={() => onNavigate('login')}
+          aria-label="Iniciar Sesión en LocalDrop"
+        >
+          <span>Iniciar Sesión</span>
           <ArrowRight size={18} />
         </button>
       </main>
 
-      <section className="landing-features-grid">
-        <div className="feature-card">
-          <div className="feature-icon-wrapper">
-            <Zap size={20} />
+      {/* 3. Bento Grid Section */}
+      <section className="bento-section">
+        <div className="bento-grid">
+          
+          {/* Tarjeta 1: Velocidad LAN */}
+          <div className="bento-card">
+            <div className="bento-card-header">
+              <div className="bento-icon-wrapper">
+                <Zap size={22} />
+              </div>
+              <h3>Velocidad LAN Nativa</h3>
+              <p>Aprovecha el máximo ancho de banda de tu router local sin limitaciones externas.</p>
+            </div>
+            
+            <div className="bento-visual">
+              <div className="speed-metric">
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Rendimiento LAN</span>
+                <span className="speed-badge">
+                  <Activity size={12} /> ~1 Gbps
+                </span>
+              </div>
+              <div className="speed-progress-bg">
+                <div className="speed-progress-fill"></div>
+              </div>
+            </div>
           </div>
-          <h3>Velocidad de Red Local</h3>
-          <p>Transfiere archivos aprovechando todo el ancho de banda de tu router local.</p>
-        </div>
 
-        <div className="feature-card">
-          <div className="feature-icon-wrapper">
-            <ShieldCheck size={20} />
-          </div>
-          <h3>Privacidad Absoluta</h3>
-          <p>Tus datos permanecen 100% dentro de tu servidor. Sin servidores externos.</p>
-        </div>
+          {/* Tarjeta 2: Privacidad & Seguridad */}
+          <div className="bento-card">
+            <div className="bento-card-header">
+              <div className="bento-icon-wrapper">
+                <ShieldCheck size={22} />
+              </div>
+              <h3>Privacidad Aislada</h3>
+              <p>Tus archivos se procesan 100% dentro de tu hardware local. Ningún dato sale a internet.</p>
+            </div>
 
-        <div className="feature-card">
-          <div className="feature-icon-wrapper">
-            <HardDrive size={20} />
+            <div className="bento-visual">
+              <div className="security-demo">
+                <span className="node-box">Cliente</span>
+                <div className="connection-line"></div>
+                <span className="node-box" style={{ color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                  TV Box
+                </span>
+              </div>
+            </div>
           </div>
-          <h3>Almacenamiento Directo</h3>
-          <p>Conecta discos externos y gestiona tu espacio sin saturar el sistema.</p>
+
+          {/* Tarjeta 3: Ecosistema Multidispositivo */}
+          <div className="bento-card">
+            <div className="bento-card-header">
+              <div className="bento-icon-wrapper">
+                <Wifi size={22} />
+              </div>
+              <h3>Multiplataforma</h3>
+              <p>Acceso instantáneo desde cualquier navegador móvil, tablet o PC de la red.</p>
+            </div>
+
+            <div className="bento-visual">
+              <div className="devices-demo">
+                <div className="device-item active">
+                  <Smartphone size={20} />
+                  <span>Móvil</span>
+                </div>
+                <div className="device-item active">
+                  <Monitor size={20} />
+                  <span>Desktop</span>
+                </div>
+                <div className="device-item active">
+                  <Tablet size={20} />
+                  <span>Tablet</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
+      {/* 4. Footer */}
       <footer className="landing-footer">
         LocalDrop &copy; {new Date().getFullYear()} &bull; Servidor de Almacenamiento Local
       </footer>
