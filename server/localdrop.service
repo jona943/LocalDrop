@@ -1,0 +1,18 @@
+[Unit]
+Description=LocalDrop Server - Local File & Text Sharing
+After=network.target
+
+[Service]
+Type=simple
+User=dev13
+WorkingDirectory=/home/dev13/LocalDrop/server
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Descomentar y ajustar la ruta si usas almacenamiento externo montado (ejemplo disco USB/HDD):
+# Environment=STORAGE_PATH=/media/dev13/StorageDisk/localdrop_data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,29 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Chat.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export default function Chat({ user, onLogout }) {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Sistema', text: 'Bienvenido a LocalDrop Chat & Transfer.', time: '10:00 AM' }
-  ]);
+  const [items, setItems] = useState([]);
   const [inputText, setInputText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [storageInfo, setStorageInfo] = useState({ free: 0, total: 0, used: 0 });
 
-  const handleSend = (e) => {
+  useEffect(() => {
+    fetchItems();
+    fetchDiskInfo();
+
+    // SSE para actualización en tiempo real
+    const eventSource = new EventSource(`${API_BASE}/events`);
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'item_added' || data.type === 'item_deleted') {
+        fetchItems();
+        fetchDiskInfo();
+      }
+    };
+
+    return () => eventSource.close();
+  }, []);
+
+  const fetchItems = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/items`);
+      const data = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error('Error al obtener ítems:', err);
+    }
+  };
+
+  const fetchDiskInfo = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/disk-info`);
+      const data = await res.json();
+      setStorageInfo(data);
+    } catch (err) {
+      console.error('Error al obtener info de disco:', err);
+    }
+  };
+
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!inputText && !selectedFile) return;
 
-    const newMessage = {
-      id: Date.now(),
-      sender: user ? user.username : 'Anónimo',
-      text: inputText,
-      file: selectedFile ? selectedFile.name : null,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+    const formData = new FormData();
+    if (inputText) formData.append('text', inputText);
+    if (selectedFile) formData.append('file', selectedFile);
+    formData.append('username', user ? user.username : 'Anónimo');
 
-    setMessages([...messages, newMessage]);
-    setInputText('');
-    setSelectedFile(null);
+    try {
+      await fetch(`${API_BASE}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      setInputText('');
+      setSelectedFile(null);
+      fetchItems();
+      fetchDiskInfo();
+    } catch (err) {
+      console.error('Error al enviar:', err);
+    }
   };
+
+  const formatSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const usedPercentage = storageInfo.total 
+    ? Math.min(100, Math.round((storageInfo.used / storageInfo.total) * 100)) 
+    : 0;
 
   return (
     <div className="chat-layout">
@@ -42,30 +97,43 @@ export default function Chat({ user, onLogout }) {
           <h3>Menú</h3>
           <div className="storage-widget">
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Almacenamiento Ocupado</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '0.2rem' }}>1.2 GB / 64 GB</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '0.2rem' }}>
+              {formatSize(storageInfo.used)} / {formatSize(storageInfo.total)}
+            </div>
             <div className="storage-bar-bg">
-              <div className="storage-bar-fill"></div>
+              <div className="storage-bar-fill" style={{ width: `${usedPercentage}%` }}></div>
             </div>
           </div>
           <div>
             <h4>Dispositivos Activos</h4>
             <ul style={{ list-style: 'none', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              <li>🟢 Servidor X96Q (Armbian)</li>
-              <li>🔵 Este Dispositivo</li>
+              <li>🟢 Servidor LocalDrop</li>
+              <li>🔵 Dispositivo Conectado</li>
             </ul>
           </div>
         </aside>
 
         <div className="chat-feed-container">
           <div className="chat-feed">
-            {messages.map((msg) => (
-              <div key={msg.id} className="chat-item">
+            {items.map((item) => (
+              <div key={item.id} className="chat-item">
                 <div className="chat-item-header">
-                  <strong>{msg.sender}</strong>
-                  <span>{msg.time}</span>
+                  <strong>{item.userName || 'Anónimo'}</strong>
+                  <span>{new Date(item.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                {msg.text && <p>{msg.text}</p>}
-                {msg.file && <div style={{ marginTop: '0.5rem', color: 'var(--primary)' }}>📎 {msg.file}</div>}
+                {item.text && <p>{item.text}</p>}
+                {item.file && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <a 
+                      href={`${API_BASE}/uploads/${item.file.filename}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}
+                    >
+                      📎 {item.file.originalname} ({formatSize(item.file.size)})
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -83,7 +151,7 @@ export default function Chat({ user, onLogout }) {
               onChange={(e) => setSelectedFile(e.target.files[0])}
             />
             <label htmlFor="file-upload" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              📎 {selectedFile ? '1 Archivo' : 'Adjuntar'}
+              📎 {selectedFile ? selectedFile.name.substring(0, 12) + '...' : 'Adjuntar'}
             </label>
             <button type="submit" className="btn-primary">Enviar</button>
           </form>
