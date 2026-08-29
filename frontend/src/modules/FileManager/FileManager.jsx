@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import './FileManager.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function FileManager({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('files');
@@ -41,7 +41,7 @@ export default function FileManager({ user, onLogout }) {
       const res = await fetch(`${API_BASE}/disks`);
       const data = await res.json();
       setDisks(data);
-      if (data.length > 0) {
+      if (Array.isArray(data) && data.length > 0) {
         setSelectedDisk(data[0]);
         explorePath(data[0].mountPoint);
       }
