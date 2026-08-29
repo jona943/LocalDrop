@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 const TRASH_RETENTION_DAYS = 30;
 
 /**
- * Detecta dinámicamente las unidades y discos montados en el sistema Linux/Unix o Windows
+ * Detecta dinámicamente solo las unidades de almacenamiento físico persistente
  */
 export const listDisks = async () => {
     const isWin = os.platform() === 'win32';
@@ -39,23 +39,29 @@ export const listDisks = async () => {
         }
     } else {
         try {
-            // Analizar la salida del comando df para detectar discos montados en Linux/Armbian
             const { stdout } = await execAsync('df -B1');
             const lines = stdout.trim().split('\n').slice(1);
             for (const line of lines) {
                 const parts = line.replace(/\s+/g, ' ').trim().split(' ');
                 if (parts.length >= 6) {
                     const mountPoint = parts[5];
-                    // Filtrar sistemas de archivos virtuales o temporales
-                    if (
-                        mountPoint && 
-                        !mountPoint.startsWith('/boot') && 
-                        !mountPoint.startsWith('/proc') && 
-                        !mountPoint.startsWith('/sys') && 
-                        !mountPoint.startsWith('/dev') && 
-                        !mountPoint.startsWith('/run') &&
-                        !mountPoint.includes('zram')
-                    ) {
+                    const fsType = parts[0];
+
+                    // Filtrar estrictamente particiones virtuales, de sistema, logs, zram y tmpfs
+                    const isSystemPartition = 
+                        !mountPoint ||
+                        mountPoint.startsWith('/boot') || 
+                        mountPoint.startsWith('/proc') || 
+                        mountPoint.startsWith('/sys') || 
+                        mountPoint.startsWith('/dev') || 
+                        mountPoint.startsWith('/run') ||
+                        mountPoint.startsWith('/var/log') ||
+                        mountPoint.startsWith('/tmp') ||
+                        fsType.includes('zram') ||
+                        fsType.includes('tmpfs') ||
+                        fsType.includes('overlay');
+
+                    if (!isSystemPartition) {
                         const total = parseInt(parts[1], 10) || 0;
                         const used = parseInt(parts[2], 10) || 0;
                         const available = parseInt(parts[3], 10) || 0;
@@ -63,8 +69,7 @@ export const listDisks = async () => {
                         if (total > 0) {
                             let name = 'Disco Local';
                             if (mountPoint === '/') name = 'Sistema Principal (eMMC)';
-                            else if (mountPoint.includes('/var/log')) name = 'Log Storage';
-                            else name = `Almacenamiento (${path.basename(mountPoint) || mountPoint})`;
+                            else name = `Disco Externo (${path.basename(mountPoint) || 'USB'})`;
 
                             disks.push({
                                 id: parts[0],
@@ -83,7 +88,6 @@ export const listDisks = async () => {
         }
     }
 
-    // Fallback si no detecta nada
     if (disks.length === 0) {
         disks.push({
             id: 'root',
@@ -125,7 +129,7 @@ export const exploreDirectory = async (dirPath) => {
                 updatedAt: stats.mtime
             });
         } catch (e) {
-            // Ignorar archivos sin permiso de lectura
+            // Ignorar archivos sin permiso
         }
     }
 

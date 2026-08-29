@@ -13,7 +13,10 @@ import {
   Lock, 
   LogOut,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Eye,
+  Info
 } from 'lucide-react';
 import './FileManager.css';
 
@@ -28,6 +31,10 @@ export default function FileManager({ user, onLogout }) {
   const [items, setItems] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
   
+  // Menú contextual para clic largo / toque largo
+  const [selectedItemMenu, setSelectedItemMenu] = useState(null);
+  
+  // Modal de contraseña para borrado definitivo
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -68,6 +75,7 @@ export default function FileManager({ user, onLogout }) {
   };
 
   const handleMoveToTrash = async (filePath) => {
+    setSelectedItemMenu(null);
     try {
       await fetch(`${API_BASE}/trash`, {
         method: 'POST',
@@ -216,7 +224,7 @@ export default function FileManager({ user, onLogout }) {
                       item={item} 
                       viewMode={viewMode}
                       onOpenFolder={(path) => explorePath(path)}
-                      onMoveToTrash={activeTab === 'files' ? handleMoveToTrash : null}
+                      onSelectContextMenu={(item) => setSelectedItemMenu(item)}
                     />
                   ))
                 )}
@@ -246,6 +254,56 @@ export default function FileManager({ user, onLogout }) {
         </main>
       </div>
 
+      {/* Menú Opciones Flotante (Desplegado por clic largo / toque largo) */}
+      {selectedItemMenu && (
+        <div className="pwd-modal-overlay" onClick={() => setSelectedItemMenu(null)}>
+          <div className="pwd-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f3f4f6' }}>{selectedItemMenu.name}</span>
+              <X size={18} style={{ cursor: 'pointer', color: '#9ca3af' }} onClick={() => setSelectedItemMenu(null)} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {!selectedItemMenu.isDirectory && (
+                <a 
+                  href={`/uploads/${selectedItemMenu.name}`} 
+                  download 
+                  className="fm-nav-item"
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#f3f4f6', textDecoration: 'none' }}
+                >
+                  <Download size={16} style={{ color: '#34d399' }} />
+                  <span>Descargar Archivo</span>
+                </a>
+              )}
+
+              {activeTab === 'files' ? (
+                <button 
+                  className="fm-nav-item"
+                  style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5' }}
+                  onClick={() => handleMoveToTrash(selectedItemMenu.path)}
+                >
+                  <Trash2 size={16} />
+                  <span>Mover a Papelera</span>
+                </button>
+              ) : (
+                <button 
+                  className="fm-nav-item"
+                  style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5' }}
+                  onClick={() => {
+                    setDeleteModalItem(selectedItemMenu);
+                    setSelectedItemMenu(null);
+                  }}
+                >
+                  <Lock size={16} />
+                  <span>Borrado Definitivo (Requiere Clave)</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmación Borrado Definitivo con Contraseña */}
       {deleteModalItem && (
         <div className="pwd-modal-overlay">
           <div className="pwd-modal-content">
