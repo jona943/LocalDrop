@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  Server, 
   Lock, 
   ArrowRight, 
   Zap, 
@@ -19,9 +18,11 @@ export default function Landing({ onNavigate }) {
       {/* 1. Header / Navbar Sticky con Blur */}
       <header className="landing-header">
         <div className="landing-brand">
-          <div className="brand-icon-box">
-            <Server size={18} />
-          </div>
+          <img 
+            src="/localDrop-icon.png" 
+            alt="LocalDrop Icon" 
+            style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain' }} 
+          />
           <span>LocalDrop<span className="brand-dot">.home</span></span>
         </div>
         <div className="status-badge">
