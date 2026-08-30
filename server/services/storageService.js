@@ -181,3 +181,17 @@ export const deletePermanently = async (filePath, inputPassword) => {
     await fs.promises.rm(resolved, { recursive: true, force: true });
     return { success: true };
 };
+
+export const pathResolve = (targetPath) => path.resolve(targetPath);
+export const fileExists = (targetPath) => fs.existsSync(targetPath);
+
+export const createFolder = async (parentPath, folderName) => {
+    const resolvedParent = path.resolve(parentPath);
+    const newFolderPath = path.join(resolvedParent, folderName);
+    if (fs.existsSync(newFolderPath)) {
+        throw new Error('La carpeta ya existe.');
+    }
+    await fs.promises.mkdir(newFolderPath, { recursive: true });
+    return { success: true, folderPath: newFolderPath };
+};
+

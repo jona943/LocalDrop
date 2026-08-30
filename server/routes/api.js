@@ -5,6 +5,8 @@ import { uploadsDir } from '../utils/paths.js';
 import * as apiController from '../controllers/apiController.js';
 import * as storageController from '../controllers/storageController.js';
 
+import fs from 'fs';
+
 const router = express.Router();
 
 // --- Configuración de Multer para Carga de Archivos ---
@@ -17,9 +19,29 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 * 1024 } // Límite de 10GB
 });
 
+const dynamicStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const targetPath = req.body.targetPath || uploadsDir;
+        if (!fs.existsSync(targetPath)) {
+            fs.mkdirSync(targetPath, { recursive: true });
+        }
+        cb(null, targetPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    }
+});
+const uploadDynamic = multer({ 
+    storage: dynamicStorage, 
+    limits: { fileSize: 10 * 1024 * 1024 * 1024 } 
+});
+
 // --- Rutas del Gestor de Almacenamiento & Papelera (Fase 1) ---
 router.get('/disks', storageController.getDisks);
 router.get('/explore', storageController.explorePath);
+router.get('/file-raw', storageController.getFileRaw);
+router.post('/create-folder', storageController.createFolder);
+router.post('/upload-to-path', uploadDynamic.single('file'), storageController.uploadToPath);
 router.post('/trash', storageController.moveToTrash);
 router.post('/delete-permanent', storageController.deletePermanently);
 

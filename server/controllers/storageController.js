@@ -48,3 +48,55 @@ export const deletePermanently = async (req, res) => {
         res.status(403).json({ error: error.message });
     }
 };
+
+// GET /file-raw?path=/ruta/al/archivo - Transmitir/Descargar archivo desde cualquier ruta
+export const getFileRaw = async (req, res) => {
+    try {
+        const targetPath = req.query.path;
+        const isDownload = req.query.download === 'true';
+        
+        if (!targetPath) {
+            return res.status(400).json({ error: 'Ruta de archivo no especificada.' });
+        }
+
+        const resolved = storageService.pathResolve(targetPath);
+        if (!storageService.fileExists(resolved)) {
+            return res.status(404).json({ error: 'Archivo no encontrado.' });
+        }
+
+        if (isDownload) {
+            res.download(resolved);
+        } else {
+            res.sendFile(resolved);
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// POST /create-folder - Crear una nueva carpeta en la ruta actual
+export const createFolder = async (req, res) => {
+    try {
+        const { targetPath, folderName } = req.body;
+        if (!targetPath || !folderName) {
+            return res.status(400).json({ error: 'Ruta y nombre de carpeta requeridos.' });
+        }
+        const result = await storageService.createFolder(targetPath, folderName);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// POST /upload-to-path - Cargar archivo directamente a la ruta actual
+export const uploadToPath = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se ha adjuntado ningún archivo.' });
+        }
+        res.json({ success: true, file: req.file });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+

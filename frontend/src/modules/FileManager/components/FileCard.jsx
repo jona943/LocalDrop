@@ -9,7 +9,7 @@ import {
   File 
 } from 'lucide-react';
 
-export default function FileCard({ item, viewMode, onOpenFolder, onSelectContextMenu }) {
+export default function FileCard({ item, viewMode, onOpenFolder, onOpenFile, onSelectContextMenu }) {
   const timerRef = useRef(null);
 
   const getFileIcon = (iconSize = 32) => {
@@ -17,10 +17,10 @@ export default function FileCard({ item, viewMode, onOpenFolder, onSelectContext
     const ext = item.name.split('.').pop().toLowerCase();
     
     if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return <Image size={iconSize} style={{ color: '#34d399' }} />;
-    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext)) return <Film size={iconSize} style={{ color: '#f43f5e' }} />;
-    if (['mp3', 'wav', 'flac'].includes(ext)) return <Music size={iconSize} style={{ color: '#a855f7' }} />;
+    if (['mp4', 'mkv', 'avi', 'mov', 'webm'].includes(ext)) return <Film size={iconSize} style={{ color: '#f43f5e' }} />;
+    if (['mp3', 'wav', 'flac', 'ogg'].includes(ext)) return <Music size={iconSize} style={{ color: '#a855f7' }} />;
     if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) return <Archive size={iconSize} style={{ color: '#eab308' }} />;
-    if (['txt', 'pdf', 'doc', 'docx', 'md'].includes(ext)) return <FileText size={iconSize} style={{ color: '#38bdf8' }} />;
+    if (['txt', 'pdf', 'doc', 'docx', 'md', 'json', 'js', 'html', 'css', 'py'].includes(ext)) return <FileText size={iconSize} style={{ color: '#38bdf8' }} />;
     
     return <File size={iconSize} style={{ color: '#9ca3af' }} />;
   };
@@ -51,7 +51,7 @@ export default function FileCard({ item, viewMode, onOpenFolder, onSelectContext
     if (item.isDirectory) {
       onOpenFolder(item.path);
     } else {
-      onSelectContextMenu(item, e);
+      onOpenFile(item);
     }
   };
 

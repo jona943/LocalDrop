@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DiskSelector from './components/DiskSelector';
 import FileCard from './components/FileCard';
 import Chat from '../Chat/Chat';
@@ -14,7 +14,11 @@ import {
   LogOut,
   X,
   AlertTriangle,
-  Download
+  Download,
+  Upload,
+  FolderPlus,
+  Eye,
+  FileText
 } from 'lucide-react';
 import './FileManager.css';
 
@@ -27,12 +31,22 @@ export default function FileManager({ user, onLogout }) {
   const [currentPath, setCurrentPath] = useState('');
   const [parentPath, setParentPath] = useState(null);
   const [items, setItems] = useState([]);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
-  
+  const [viewMode, setViewMode] = useState('grid');
+
   const [selectedItemMenu, setSelectedItemMenu] = useState(null);
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  // Estados para vistas previas y operaciones de archivo
+  const [previewItem, setPreviewItem] = useState(null);
+  const [previewTextContent, setPreviewTextContent] = useState(null);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [folderError, setFolderError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchDisks();
@@ -67,6 +81,76 @@ export default function FileManager({ user, onLogout }) {
   const handleSelectDisk = (disk) => {
     setSelectedDisk(disk);
     explorePath(disk.mountPoint);
+  };
+
+  const handleOpenFile = async (item) => {
+    setPreviewTextContent(null);
+    setPreviewItem(item);
+
+    const ext = item.name.split('.').pop().toLowerCase();
+    const isText = ['txt', 'json', 'js', 'html', 'css', 'py', 'md', 'log', 'sh', 'xml', 'yaml', 'yml'].includes(ext);
+
+    if (isText) {
+      try {
+        const res = await fetch(`${API_BASE}/file-raw?path=${encodeURIComponent(item.path)}`);
+        const text = await res.text();
+        setPreviewTextContent(text);
+      } catch (err) {
+        setPreviewTextContent('Error al leer el archivo de texto.');
+      }
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentPath) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('targetPath', currentPath);
+
+    try {
+      const res = await fetch(`${API_BASE}/upload-to-path`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        explorePath(currentPath);
+      } else {
+        alert('Error al subir el archivo.');
+      }
+    } catch (err) {
+      console.error('Error subiendo archivo:', err);
+      alert('Error de red al subir el archivo.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCreateFolder = async (e) => {
+    e.preventDefault();
+    setFolderError('');
+    if (!newFolderName.trim()) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/create-folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPath: currentPath, folderName: newFolderName.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowNewFolderModal(false);
+        setNewFolderName('');
+        explorePath(currentPath);
+      } else {
+        setFolderError(data.error || 'No se pudo crear la carpeta.');
+      }
+    } catch (err) {
+      setFolderError('Error al crear la carpeta.');
+    }
   };
 
   const handleMoveToTrash = async (filePath) => {
@@ -110,6 +194,66 @@ export default function FileManager({ user, onLogout }) {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const renderFilePreviewContent = () => {
+    if (!previewItem) return null;
+    const ext = previewItem.name.split('.').pop().toLowerCase();
+    const rawUrl = `${API_BASE}/file-raw?path=${encodeURIComponent(previewItem.path)}`;
+
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
+      return (
+        <div style={{ textAlign: 'center', overflow: 'auto', maxHeight: '70vh' }}>
+          <img src={rawUrl} alt={previewItem.name} style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px', objectFit: 'contain' }} />
+        </div>
+      );
+    }
+
+    if (['mp4', 'webm', 'mkv', 'mov'].includes(ext)) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <video src={rawUrl} controls autoPlay style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '8px' }} />
+        </div>
+      );
+    }
+
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) {
+      return (
+        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+          <audio src={rawUrl} controls autoPlay style={{ width: '100%', maxWidth: '400px' }} />
+        </div>
+      );
+    }
+
+    if (ext === 'pdf') {
+      return (
+        <iframe src={rawUrl} title={previewItem.name} style={{ width: '100%', height: '70vh', border: 'none', borderRadius: '8px' }} />
+      );
+    }
+
+    if (previewTextContent !== null) {
+      return (
+        <pre style={{ background: '#111827', color: '#e5e7eb', padding: '1rem', borderRadius: '8px', overflow: 'auto', maxHeight: '65vh', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+          {previewTextContent}
+        </pre>
+      );
+    }
+
+    return (
+      <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+        <FileText size={48} style={{ marginBottom: '1rem', color: '#818cf8' }} />
+        <p style={{ marginBottom: '1rem' }}>No hay vista previa directa disponible para este tipo de archivo.</p>
+        <a 
+          href={`${rawUrl}&download=true`}
+          download
+          className="btn-logout"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+        >
+          <Download size={16} />
+          <span>Descargar {previewItem.name}</span>
+        </a>
+      </div>
+    );
   };
 
   return (
@@ -196,6 +340,37 @@ export default function FileManager({ user, onLogout }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {activeTab === 'files' && (
+                    <>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        style={{ display: 'none' }} 
+                        onChange={handleFileUpload} 
+                      />
+                      <button 
+                        className="btn-copy"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        title="Subir Archivo a esta carpeta"
+                        style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                      >
+                        <Upload size={16} />
+                        <span className="desktop-only">{isUploading ? 'Subiendo...' : 'Subir Archivo'}</span>
+                      </button>
+
+                      <button 
+                        className="btn-copy"
+                        onClick={() => setShowNewFolderModal(true)}
+                        title="Crear Nueva Carpeta"
+                        style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                      >
+                        <FolderPlus size={16} />
+                        <span className="desktop-only">Nueva Carpeta</span>
+                      </button>
+                    </>
+                  )}
+
                   <div className="view-mode-btns">
                     <button 
                       className={`btn-view ${viewMode === 'grid' ? 'active' : ''}`} 
@@ -228,6 +403,7 @@ export default function FileManager({ user, onLogout }) {
                       item={item} 
                       viewMode={viewMode}
                       onOpenFolder={(path) => explorePath(path)}
+                      onOpenFile={handleOpenFile}
                       onSelectContextMenu={(item) => setSelectedItemMenu(item)}
                     />
                   ))
@@ -258,6 +434,70 @@ export default function FileManager({ user, onLogout }) {
         </main>
       </div>
 
+      {/* Modal de Vista Previa en la misma página */}
+      {previewItem && (
+        <div className="pwd-modal-overlay" onClick={() => setPreviewItem(null)}>
+          <div className="pwd-modal-content" style={{ maxWidth: '800px', width: '90%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Eye size={18} style={{ color: '#818cf8' }} />
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f3f4f6' }}>{previewItem.name}</span>
+              </div>
+              <X size={18} style={{ cursor: 'pointer', color: '#9ca3af' }} onClick={() => setPreviewItem(null)} />
+            </div>
+
+            {renderFilePreviewContent()}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.6rem' }}>
+              <a 
+                href={`${API_BASE}/file-raw?path=${encodeURIComponent(previewItem.path)}&download=true`} 
+                download 
+                className="btn-copy"
+                style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', textDecoration: 'none' }}
+              >
+                <Download size={15} />
+                <span>Descargar</span>
+              </a>
+              <button className="btn-logout" onClick={() => setPreviewItem(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear Nueva Carpeta */}
+      {showNewFolderModal && (
+        <div className="pwd-modal-overlay">
+          <div className="pwd-modal-content">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#34d399', fontWeight: 700 }}>
+                <FolderPlus size={18} />
+                <span>Crear Nueva Carpeta</span>
+              </div>
+              <X size={18} style={{ cursor: 'pointer' }} onClick={() => setShowNewFolderModal(false)} />
+            </div>
+
+            {folderError && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{folderError}</div>}
+
+            <form onSubmit={handleCreateFolder} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <input 
+                type="text" 
+                className="input-control" 
+                placeholder="Nombre de la carpeta" 
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                autoFocus
+                required
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn-logout" onClick={() => setShowNewFolderModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-copy" style={{ background: '#10b981', color: '#fff' }}>Crear</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Menú de Contexto (Opciones de archivo) */}
       {selectedItemMenu && (
         <div className="pwd-modal-overlay" onClick={() => setSelectedItemMenu(null)}>
           <div className="pwd-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -268,15 +508,30 @@ export default function FileManager({ user, onLogout }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {!selectedItemMenu.isDirectory && (
-                <a 
-                  href={`/uploads/${selectedItemMenu.name}`} 
-                  download 
-                  className="fm-nav-item"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#f3f4f6', textDecoration: 'none' }}
-                >
-                  <Download size={16} style={{ color: '#34d399' }} />
-                  <span>Descargar Archivo</span>
-                </a>
+                <>
+                  <button 
+                    className="fm-nav-item"
+                    style={{ background: 'rgba(129, 140, 248, 0.15)', color: '#818cf8' }}
+                    onClick={() => {
+                      const item = selectedItemMenu;
+                      setSelectedItemMenu(null);
+                      handleOpenFile(item);
+                    }}
+                  >
+                    <Eye size={16} />
+                    <span>Ver / Previsualizar</span>
+                  </button>
+
+                  <a 
+                    href={`${API_BASE}/file-raw?path=${encodeURIComponent(selectedItemMenu.path)}&download=true`} 
+                    download 
+                    className="fm-nav-item"
+                    style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#f3f4f6', textDecoration: 'none' }}
+                  >
+                    <Download size={16} style={{ color: '#34d399' }} />
+                    <span>Descargar Archivo</span>
+                  </a>
+                </>
               )}
 
               {activeTab === 'files' ? (
