@@ -422,7 +422,7 @@ export default function FileManager({ user, onLogout }) {
               <div className="sidebar-card" style={{ marginBottom: '1rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.5rem' }}>Información de Sesión</h3>
                 <div style={{ fontSize: '0.85rem', color: '#d1d5db' }}>Usuario: <strong>{user ? user.username : 'admin'}</strong></div>
-                <div style={{ fontSize: '0.85rem', color: '#d1d5db', marginTop: '0.25rem' }}>Inactividad: <strong>Cierre automático en 5 minutos</strong></div>
+                <div style={{ fontSize: '0.85rem', color: '#d1d5db', marginTop: '0.25rem' }}>Inactividad: <strong>Cierre automático en 30 minutos</strong></div>
               </div>
 
               <div className="sidebar-card">

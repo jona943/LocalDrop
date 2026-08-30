@@ -5,7 +5,7 @@ import Chat from './modules/Chat/Chat';
 import FileManager from './modules/FileManager/FileManager';
 import './styles/global.css';
 
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos en milisegundos
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos en milisegundos
 
 export default function App() {
   const [currentModule, setCurrentModule] = useState('landing'); // 'landing', 'login', 'drive', 'chat'
@@ -28,7 +28,7 @@ export default function App() {
     }
   }, []);
 
-  // 2. Temporizador de inactividad de 5 minutos
+  // 2. Temporizador de inactividad de 30 minutos
   const resetInactivityTimer = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     
@@ -37,7 +37,7 @@ export default function App() {
 
       timerRef.current = setTimeout(() => {
         handleLogout();
-        alert('Sesión cerrada automáticamente por 5 minutos de inactividad.');
+        alert('Sesión cerrada automáticamente por 30 minutos de inactividad.');
       }, INACTIVITY_TIMEOUT);
     }
   };
