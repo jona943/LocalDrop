@@ -29,6 +29,7 @@ export const listDisks = async () => {
                     if (current.id && current.total > 0) {
                         current.mountPoint = current.id + '\\';
                         current.used = current.total - current.available;
+                        current.isExternal = !current.id.toUpperCase().startsWith('C');
                         disks.push({ ...current });
                         current = {};
                     }
@@ -77,7 +78,8 @@ export const listDisks = async () => {
                                 mountPoint,
                                 total,
                                 used,
-                                available
+                                available,
+                                isExternal: mountPoint !== '/'
                             });
                         }
                     }
@@ -95,11 +97,36 @@ export const listDisks = async () => {
             mountPoint: process.env.STORAGE_PATH || '/',
             total: 500 * 1024 * 1024 * 1024,
             used: 10 * 1024 * 1024 * 1024,
-            available: 490 * 1024 * 1024 * 1024
+            available: 490 * 1024 * 1024 * 1024,
+            isExternal: false
         });
     }
 
     return disks;
+};
+
+/**
+ * Obtener la temperatura del procesador/servidor
+ */
+export const getCpuTemperature = async () => {
+    try {
+        if (fs.existsSync('/sys/class/thermal/thermal_zone0/temp')) {
+            const raw = (await fs.promises.readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8')).trim();
+            const val = parseFloat(raw);
+            if (!isNaN(val)) {
+                const celsius = val > 1000 ? val / 1000 : val;
+                return { celsius: Math.round(celsius * 10) / 10, unit: '°C', status: 'ok' };
+            }
+        }
+        const { stdout } = await execAsync('vcgencmd measure_temp').catch(() => ({ stdout: '' }));
+        const match = stdout.match(/temp=([\d\.]+)/);
+        if (match) {
+            return { celsius: parseFloat(match[1]), unit: '°C', status: 'ok' };
+        }
+    } catch (err) {
+        // Ignorar error y devolver fallo suave
+    }
+    return { celsius: null, unit: '°C', status: 'unavailable', message: 'N/A' };
 };
 
 /**

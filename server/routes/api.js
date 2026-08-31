@@ -38,6 +38,7 @@ const uploadDynamic = multer({
 
 // --- Rutas del Gestor de Almacenamiento & Papelera (Fase 1) ---
 router.get('/disks', storageController.getDisks);
+router.get('/temperature', storageController.getTemperature);
 router.get('/explore', storageController.explorePath);
 router.get('/file-raw', storageController.getFileRaw);
 router.post('/create-folder', storageController.createFolder);

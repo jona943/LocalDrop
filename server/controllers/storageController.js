@@ -10,6 +10,16 @@ export const getDisks = async (req, res) => {
     }
 };
 
+// GET /api/temperature - Obtener la temperatura del servidor
+export const getTemperature = async (req, res) => {
+    try {
+        const tempInfo = await storageService.getCpuTemperature();
+        res.json(tempInfo);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // GET /api/explore?path=/ruta - Explorar carpetas reales
 export const explorePath = async (req, res) => {
     try {

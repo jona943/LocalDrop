@@ -18,20 +18,22 @@ import {
   Upload,
   FolderPlus,
   Eye,
-  FileText
+  FileText,
+  Thermometer
 } from 'lucide-react';
 import './FileManager.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function FileManager({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('files');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('localdrop_last_tab') || 'files');
   const [disks, setDisks] = useState([]);
   const [selectedDisk, setSelectedDisk] = useState(null);
   const [currentPath, setCurrentPath] = useState('');
   const [parentPath, setParentPath] = useState(null);
   const [items, setItems] = useState([]);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('localdrop_view_mode') || 'grid');
+  const [serverTemp, setServerTemp] = useState(null);
 
   const [selectedItemMenu, setSelectedItemMenu] = useState(null);
   const [deleteModalItem, setDeleteModalItem] = useState(null);
@@ -48,6 +50,43 @@ export default function FileManager({ user, onLogout }) {
 
   const fileInputRef = useRef(null);
 
+  // Persistir cambios en pestaña activa y modo de vista
+  useEffect(() => {
+    localStorage.setItem('localdrop_last_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('localdrop_view_mode', viewMode);
+  }, [viewMode]);
+
+  // Indicador de temperatura en tiempo real (cada 5s solo si el usuario está activo/logueado)
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+    const fetchTemperature = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/temperature`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setServerTemp(data.celsius);
+          }
+        }
+      } catch (err) {
+        // Ignorar fallos de red esporádicos para temperatura
+      }
+    };
+
+    fetchTemperature();
+    const tempInterval = setInterval(fetchTemperature, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(tempInterval);
+    };
+  }, [user]);
+
   useEffect(() => {
     fetchDisks();
   }, []);
@@ -57,9 +96,41 @@ export default function FileManager({ user, onLogout }) {
       const res = await fetch(`${API_BASE}/disks`);
       const data = await res.json();
       setDisks(data);
+
       if (Array.isArray(data) && data.length > 0) {
-        setSelectedDisk(data[0]);
-        explorePath(data[0].mountPoint);
+        const savedPath = localStorage.getItem('localdrop_last_path');
+        const savedDiskMount = localStorage.getItem('localdrop_last_disk');
+
+        let initialDisk = null;
+        let targetPath = null;
+
+        if (savedDiskMount) {
+          initialDisk = data.find(d => d.mountPoint === savedDiskMount);
+        }
+        if (!initialDisk && savedPath) {
+          initialDisk = data.find(d => savedPath.startsWith(d.mountPoint));
+        }
+
+        // Si hay una ruta guardada válida, se restaura la última posición del usuario
+        if (savedPath && initialDisk) {
+          targetPath = savedPath;
+        } else {
+          // Si no hay ruta previa, priorizar Almacenamiento EXTERNO si existe, de lo contrario el único disponible
+          const externalDisk = data.find(d => d.isExternal || (d.mountPoint !== '/' && !d.mountPoint.toLowerCase().startsWith('c:')));
+          if (externalDisk) {
+            initialDisk = externalDisk;
+            targetPath = externalDisk.mountPoint;
+          } else {
+            initialDisk = data[0];
+            targetPath = data[0].mountPoint;
+          }
+        }
+
+        setSelectedDisk(initialDisk);
+        if (initialDisk) {
+          localStorage.setItem('localdrop_last_disk', initialDisk.mountPoint);
+        }
+        explorePath(targetPath || initialDisk.mountPoint);
       }
     } catch (err) {
       console.error('Error al cargar unidades:', err);
@@ -70,9 +141,12 @@ export default function FileManager({ user, onLogout }) {
     try {
       const res = await fetch(`${API_BASE}/explore?path=${encodeURIComponent(targetPath)}`);
       const data = await res.json();
-      setCurrentPath(data.currentPath);
-      setParentPath(data.parentPath);
-      setItems(data.items || []);
+      if (res.ok) {
+        setCurrentPath(data.currentPath);
+        setParentPath(data.parentPath);
+        setItems(data.items || []);
+        localStorage.setItem('localdrop_last_path', data.currentPath);
+      }
     } catch (err) {
       console.error('Error al explorar directorio:', err);
     }
@@ -80,6 +154,7 @@ export default function FileManager({ user, onLogout }) {
 
   const handleSelectDisk = (disk) => {
     setSelectedDisk(disk);
+    localStorage.setItem('localdrop_last_disk', disk.mountPoint);
     explorePath(disk.mountPoint);
   };
 
@@ -265,6 +340,16 @@ export default function FileManager({ user, onLogout }) {
         </div>
 
         <div className="fm-header-actions">
+          <div 
+            className={`server-temp-badge ${
+              serverTemp === null ? '' : serverTemp >= 70 ? 'hot' : serverTemp >= 55 ? 'warm' : 'normal'
+            }`}
+            title="Temperatura del servidor en tiempo real (actualización cada 5s)"
+          >
+            <Thermometer size={15} />
+            <span>{serverTemp !== null ? `${serverTemp} °C` : '-- °C'}</span>
+          </div>
+
           <button 
             className={`btn-copy ${activeTab === 'settings' ? 'active' : ''}`} 
             onClick={() => setActiveTab('settings')} 
