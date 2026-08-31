@@ -29,6 +29,15 @@ app.use('/', apiRouter);
 const frontendDist = path.join(serverDir, '../frontend/dist');
 app.use(express.static(frontendDist));
 
+// --- Manejar Activos Estáticos No Encontrados (Evita error MIME text/html en .js / .css) ---
+app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|json|woff2?|ttf|eot)$/i)) {
+        return res.status(404).send('Asset not found');
+    }
+    next();
+});
+
+// --- SPA Fallback para Navegación HTML ---
 app.use((req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'), (err) => {
         if (err) {
