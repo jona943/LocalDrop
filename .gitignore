@@ -9,6 +9,5 @@ data/
 # Entorno y Configuración
 .env
 .DS_Store
-dist/
 build/
 ___localProcess_Manager/server/localdrop.service
